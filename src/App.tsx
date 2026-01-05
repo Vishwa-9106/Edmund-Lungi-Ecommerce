@@ -22,6 +22,7 @@ const CartPage = lazy(() => import("@/pages/Cart/CartPage"));
 const FAQPage = lazy(() => import("@/pages/FAQ/FAQPage"));
 const LoginPage = lazy(() => import("@/pages/Login/LoginPage"));
 const SignupPage = lazy(() => import("@/pages/Signup/SignupPage"));
+const VerifyEmailPage = lazy(() => import("@/pages/VerifyEmail/VerifyEmailPage"));
 const CustomerDashboard = lazy(() => import("@/pages/CustomerDashboard/CustomerDashboard"));
 const AdminPage = lazy(() => import("@/pages/Admin/AdminPage"));
 const AdminDashboardPage = lazy(() => import("@/pages/Admin/DashboardPage"));
@@ -30,6 +31,7 @@ const AdminOrdersPage = lazy(() => import("@/pages/Admin/OrdersPage"));
 const AdminProductsPage = lazy(() => import("@/pages/Admin/ProductsPage"));
 const AdminCustomersPage = lazy(() => import("@/pages/Admin/CustomersPage"));
 const AdminMarketingPage = lazy(() => import("@/pages/Admin/MarketingPage"));
+const AdminEmailMarketingPage = lazy(() => import("@/pages/Admin/EmailMarketingPage"));
 const AdminMessagesPage = lazy(() => import("@/pages/Admin/MessagesPage"));
 const CheckoutPage = lazy(() => import("@/pages/Checkout/CheckoutPage"));
 const OrderSuccessPage = lazy(() => import("@/pages/OrderSuccess/OrderSuccessPage"));
@@ -94,6 +96,7 @@ const AppRoutes = () => {
         {/* Auth Routes (no layout) */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
         {/* Admin Route (blank page, no layout) */}
         <Route
@@ -110,6 +113,7 @@ const AppRoutes = () => {
           <Route path="products" element={<AdminProductsPage />} />
           <Route path="customers" element={<AdminCustomersPage />} />
           <Route path="marketing" element={<AdminMarketingPage />} />
+          <Route path="marketing/email" element={<AdminEmailMarketingPage />} />
           <Route path="messages" element={<AdminMessagesPage />} />
         </Route>
 

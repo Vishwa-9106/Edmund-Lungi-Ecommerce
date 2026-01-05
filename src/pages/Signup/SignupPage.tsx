@@ -51,8 +51,16 @@ export default function SignupPage() {
     setIsLoading(false);
 
     if (result.ok) {
-      toast({ title: "Account created!", description: "Welcome to Edmund Lungi's." });
-      navigate("/home", { replace: true });
+      if (result.needsEmailConfirmation) {
+        toast({
+          title: "Check your email",
+          description: "We sent you a confirmation link. Verify your email, then log in.",
+        });
+        navigate("/verify-email", { replace: true, state: { email: gmail.trim() } });
+      } else {
+        toast({ title: "Account created!", description: "Welcome to Edmund Lungi's." });
+        navigate("/home", { replace: true });
+      }
     } else {
       toast({ title: "Signup failed", description: result.error || "Please try again.", variant: "destructive" });
     }

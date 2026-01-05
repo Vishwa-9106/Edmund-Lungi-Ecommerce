@@ -3,6 +3,21 @@ add column if not exists wishlist text[] not null default '{}'::text[];
 
 alter table public.users enable row level security;
 
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.users u
+    where u.id = auth.uid()
+      and u.role = 'admin'
+  );
+$$;
+
 do $$
 begin
   if not exists (
@@ -17,6 +32,21 @@ begin
     to authenticated
     using (id = auth.uid());
   end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'users'
+      and policyname = 'users_select_admin_all'
+  ) then
+    execute 'drop policy users_select_admin_all on public.users';
+  end if;
+
+  create policy users_select_admin_all on public.users
+  for select
+  to authenticated
+  using (public.is_admin());
 
   if not exists (
     select 1

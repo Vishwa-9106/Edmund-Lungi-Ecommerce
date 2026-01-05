@@ -22,7 +22,7 @@ interface AuthContextType {
     email: string,
     password: string,
     mobile: string
-  ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  ) => Promise<{ ok: true; needsEmailConfirmation?: boolean } | { ok: false; error: string }>;
   googleSignIn: () => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -157,6 +157,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       const u = data.user;
       if (!u) return { ok: false as const, error: "Login failed" };
+
+      const confirmedAt = (u as any)?.email_confirmed_at || (u as any)?.confirmed_at;
+      if (!confirmedAt) {
+        void supabase.auth.signOut();
+        return { ok: false as const, error: "Please verify your email before logging in" };
+      }
+
       const resolvedRole = await fetchUserRole(u.id);
       setUser({
         id: u.id,
@@ -183,7 +190,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) throw error;
       const u = data.user;
-      if (!u) return { ok: true as const }; // may need email verification
+      const session = data.session;
+
+      if (!session) {
+        // Email confirmation enabled: user exists but is not signed in yet.
+        return { ok: true as const, needsEmailConfirmation: true };
+      }
+
+      if (!u) return { ok: false as const, error: "Signup failed" };
+
       setUser({ id: u.id, email: u.email || "", name, createdAt: (u as any)?.created_at || undefined });
       setRole("user");
       return { ok: true as const };
