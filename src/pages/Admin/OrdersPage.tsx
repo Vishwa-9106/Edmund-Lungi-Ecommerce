@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+type OrderStatus = "Pending" | "Confirmed" | "Processing" | "Shipped" | "Delivered" | "Completed" | "Cancelled";
 
 type OrderRow = {
   id: string;
@@ -75,7 +75,7 @@ type OrderModalData = {
   }>;
 };
 
-const ALL_STATUSES: OrderStatus[] = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+const ALL_STATUSES: OrderStatus[] = ["Pending", "Confirmed", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"];
 
 function normalizeStatus(status: string | null | undefined): OrderStatus {
   if (!status) return "Pending";
@@ -121,7 +121,11 @@ function parseOrderItems(raw: unknown): NormalizedOrderItem[] {
 
 function statusBadgeVariant(status: OrderStatus): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
+    case "Confirmed":
+      return "secondary";
     case "Delivered":
+      return "default";
+    case "Completed":
       return "default";
     case "Shipped":
       return "secondary";
@@ -321,14 +325,13 @@ export default function OrdersPage() {
     setOrders((curr) => curr.map((o) => (o.id === orderId ? { ...o, status: next } : o)));
 
     try {
-      const { error: updateError } = await supabase
-        .from("orders")
-        .update({ status: next })
-        .eq("id", orderId);
+      const { error: invokeError } = await supabase.functions.invoke("order-status-email", {
+        body: { order_id: orderId, new_status: next },
+      });
 
-      if (updateError) {
+      if (invokeError) {
         setOrders((curr) => curr.map((o) => (o.id === orderId ? { ...o, status: prevStatus } : o)));
-        toast({ title: "Update failed", description: updateError.message || "Could not update order status" });
+        toast({ title: "Update failed", description: invokeError.message || "Could not update order status" });
         return;
       }
     } catch (e: any) {
