@@ -68,32 +68,329 @@ function buildEmailHtml(args: {
   const today = formatDate(new Date().toISOString());
 
   if (args.emailType === "confirmed") {
-    return `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111;">
-  <p>Hi ${escapeHtml(name)},</p>
-  <p>Your order <strong>${escapeHtml(orderId)}</strong> placed on <strong>${escapeHtml(createdAt)}</strong> has been <strong>confirmed</strong>.</p>
-  <p>Total amount: <strong>${escapeHtml(total)}</strong></p>
-  <p>We’re now preparing your order and will update you once it moves to the next stage.</p>
-  <p>Thank you for shopping with Edmund Lungi’s.</p>
-  <p style="margin-top:24px;">Regards,<br/>Edmund Lungi’s Support</p>
-</body></html>`;
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmed - Edmund Lungi's</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F6F8FB; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F6F8FB;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 24px rgba(11, 28, 45, 0.08);">
+          <tr>
+            <td style="padding: 40px 40px 24px 40px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+              <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #0B1C2D; letter-spacing: 2px;">EDMUND LUNGI'S</h1>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #C9A24D; letter-spacing: 3px; text-transform: uppercase;">Premium South Indian Textiles</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px 0 40px; text-align: center;">
+              <span style="display: inline-block; padding: 8px 24px; background-color: #0B1C2D; color: #ffffff; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; border-radius: 20px;">Confirmed</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px 16px 40px;">
+              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; color: #111111; font-weight: 400;">Dear ${escapeHtml(name)},</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 32px 40px;">
+              <p style="margin: 0; font-size: 15px; line-height: 1.7; color: #6B7280;">Thank you for choosing Edmund Lungi's. We are pleased to confirm that your order has been received and is being prepared with the utmost care.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 32px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F6F8FB; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <p style="margin: 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Order ID</p>
+                          <p style="margin: 4px 0 0 0; font-size: 16px; color: #111111; font-weight: 500;">${escapeHtml(orderId)}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <p style="margin: 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Order Date</p>
+                          <p style="margin: 4px 0 0 0; font-size: 16px; color: #111111; font-weight: 500;">${escapeHtml(createdAt)}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <p style="margin: 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Total Amount</p>
+                          <p style="margin: 4px 0 0 0; font-size: 20px; color: #0B1C2D; font-weight: 600;">${escapeHtml(total)}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-left: 2px solid #C9A24D;">
+                <tr>
+                  <td style="padding-left: 20px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-style: italic; line-height: 1.7; color: #6B7280;">Each piece in your order has been crafted with the finest South Indian textiles, embodying generations of artisanal excellence and timeless elegance.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px;">
+              <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px; text-align: center;">
+              <p style="margin: 0 0 16px 0; font-size: 13px; color: #6B7280;">Stay connected with Edmund Lungi's</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.facebook.com/share/1DmfPCWzYt/?mibextid=wwXIfr" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.instagram.com/edmund_lungi?igsh=MTE3YWd1bHNoZnc3cw%3D%3D&utm_source=qr" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" alt="Instagram" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://wa.me/916383329471" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 24px 0 0 0; font-size: 13px; color: #111111;">Regards,<br><span style="color: #C9A24D;">Edmund Lungi's Support</span></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
   }
 
   if (args.emailType === "delivered") {
-    return `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111;">
-  <p>Hi ${escapeHtml(name)},</p>
-  <p>Good news—your order <strong>${escapeHtml(orderId)}</strong> has been <strong>delivered</strong> on <strong>${escapeHtml(today)}</strong>.</p>
-  <p>Thank you for choosing Edmund Lungi’s. We hope you love your purchase.</p>
-  <p style="margin-top:24px;">Regards,<br/>Edmund Lungi’s Support</p>
-</body></html>`;
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Delivered - Edmund Lungi's</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F6F8FB; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F6F8FB;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 24px rgba(11, 28, 45, 0.08);">
+          <tr>
+            <td style="padding: 40px 40px 24px 40px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+              <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #0B1C2D; letter-spacing: 2px;">EDMUND LUNGI'S</h1>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #C9A24D; letter-spacing: 3px; text-transform: uppercase;">Premium South Indian Textiles</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px 0 40px; text-align: center;">
+              <span style="display: inline-block; padding: 8px 24px; background-color: #C9A24D; color: #0B1C2D; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; border-radius: 20px;">Delivered</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px 16px 40px;">
+              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; color: #111111; font-weight: 400;">Dear ${escapeHtml(name)},</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 32px 40px;">
+              <p style="margin: 0; font-size: 15px; line-height: 1.7; color: #6B7280;">We are delighted to inform you that your order has been successfully delivered. We hope it arrives in perfect condition and exceeds your expectations.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 32px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F6F8FB; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <p style="margin: 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Order ID</p>
+                          <p style="margin: 4px 0 0 0; font-size: 16px; color: #111111; font-weight: 500;">${escapeHtml(orderId)}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <p style="margin: 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Delivery Date</p>
+                          <p style="margin: 4px 0 0 0; font-size: 16px; color: #111111; font-weight: 500;">${escapeHtml(today)}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-left: 2px solid #C9A24D;">
+                <tr>
+                  <td style="padding-left: 20px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-style: italic; line-height: 1.7; color: #6B7280;">May your new pieces bring you comfort and elegance. We invite you to explore our curated collections, where tradition meets contemporary sophistication.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px;">
+              <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px; text-align: center;">
+              <p style="margin: 0 0 16px 0; font-size: 13px; color: #6B7280;">Stay connected with Edmund Lungi's</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.facebook.com/share/1DmfPCWzYt/?mibextid=wwXIfr" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.instagram.com/edmund_lungi?igsh=MTE3YWd1bHNoZnc3cw%3D%3D&utm_source=qr" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" alt="Instagram" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://wa.me/916383329471" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 24px 0 0 0; font-size: 13px; color: #111111;">Regards,<br><span style="color: #C9A24D;">Edmund Lungi's Support</span></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
   }
 
-  return `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111;">
-  <p>Hi ${escapeHtml(name)},</p>
-  <p>Your order <strong>${escapeHtml(orderId)}</strong> is now marked as <strong>completed</strong>.</p>
-  <p>Total paid: <strong>${escapeHtml(total)}</strong></p>
-  <p>We’d love to see you again. If you have any feedback, simply reply to this email.</p>
-  <p style="margin-top:24px;">Regards,<br/>Edmund Lungi’s Support</p>
-</body></html>`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Completed - Edmund Lungi's</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F6F8FB; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F6F8FB;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 24px rgba(11, 28, 45, 0.08);">
+          <tr>
+            <td style="padding: 40px 40px 24px 40px; text-align: center; border-bottom: 1px solid #E5E7EB;">
+              <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #0B1C2D; letter-spacing: 2px;">EDMUND LUNGI'S</h1>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #C9A24D; letter-spacing: 3px; text-transform: uppercase;">Premium South Indian Textiles</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px 0 40px; text-align: center;">
+              <span style="display: inline-block; padding: 8px 24px; background-color: #10B981; color: #ffffff; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; border-radius: 20px;">Completed</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px 16px 40px;">
+              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; color: #111111; font-weight: 400;">Dear ${escapeHtml(name)},</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 32px 40px;">
+              <p style="margin: 0; font-size: 15px; line-height: 1.7; color: #6B7280;">Your order has been successfully completed. We are truly grateful for your trust in Edmund Lungi's and hope you cherish your new pieces for years to come.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 32px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F6F8FB; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <p style="margin: 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Order ID</p>
+                          <p style="margin: 4px 0 0 0; font-size: 16px; color: #111111; font-weight: 500;">${escapeHtml(orderId)}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <p style="margin: 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Total Paid</p>
+                          <p style="margin: 4px 0 0 0; font-size: 20px; color: #0B1C2D; font-weight: 600;">${escapeHtml(total)}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-left: 2px solid #C9A24D;">
+                <tr>
+                  <td style="padding-left: 20px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-style: italic; line-height: 1.7; color: #6B7280;">Your patronage means the world to us. As a valued member of the Edmund Lungi's family, we look forward to continuing to dress you in the finest traditions of South Indian craftsmanship.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px;">
+              <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px; text-align: center;">
+              <p style="margin: 0 0 16px 0; font-size: 13px; color: #6B7280;">Stay connected with Edmund Lungi's</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.facebook.com/share/1DmfPCWzYt/?mibextid=wwXIfr" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.instagram.com/edmund_lungi?igsh=MTE3YWd1bHNoZnc3cw%3D%3D&utm_source=qr" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" alt="Instagram" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://wa.me/916383329471" style="text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" width="24" height="24" style="display: block; border: 0;">
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 24px 0 0 0; font-size: 13px; color: #111111;">Regards,<br><span style="color: #C9A24D;">Edmund Lungi's Support</span></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 async function sendViaSmtp(args: { to: string; subject: string; html: string }) {
