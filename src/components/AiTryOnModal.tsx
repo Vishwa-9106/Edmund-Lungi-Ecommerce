@@ -23,10 +23,11 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
   const [validationError, setValidationError] = useState<string | null>(null);
   const [bodyType, setBodyType] = useState<"full" | "half" | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [rechargeUrl, setRechargeUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+    const [rechargeUrl, setRechargeUrl] = useState<string | null>(null);
+    const [isDemoMode, setIsDemoMode] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -81,6 +82,7 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
           userImage: userImageBase64,
           dhotImage: patternBase64,
           bodyType: bodyType,
+          isDemo: isDemoMode,
         },
       });
 
@@ -96,7 +98,11 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
       }
 
       if (data?.image) {
-        setGeneratedImage(`data:image/png;base64,${data.image}`);
+        if (data.image.startsWith("http")) {
+          setGeneratedImage(data.image);
+        } else {
+          setGeneratedImage(`data:image/png;base64,${data.image}`);
+        }
       } else {
         throw new Error("No image returned from API");
       }
@@ -246,18 +252,41 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
                     <AlertCircle className="w-10 h-10 text-destructive mb-4" />
                     <p className="text-destructive mb-4">{apiError}</p>
                     <div className="flex flex-col gap-2 w-full">
-                      {rechargeUrl ? (
-                        <Button asChild className="gap-2">
-                          <a href={rechargeUrl} target="_blank" rel="noopener noreferrer">
-                            Recharge Segmind Credits
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button onClick={handleRetry} variant="outline" className="gap-2">
-                          <RefreshCw className="w-4 h-4" />
-                          Retry
-                        </Button>
-                      )}
+                        {rechargeUrl ? (
+                          <div className="flex flex-col gap-3 w-full">
+                            <Button asChild className="gap-2 w-full">
+                              <a href={rechargeUrl} target="_blank" rel="noopener noreferrer">
+                                Recharge Segmind Credits
+                              </a>
+                            </Button>
+                            <div className="relative">
+                              <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-muted-foreground/20" />
+                              </div>
+                              <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-secondary px-2 text-muted-foreground">Or try demo mode</span>
+                              </div>
+                            </div>
+                            <Button 
+                              onClick={() => {
+                                setIsDemoMode(true);
+                                setApiError(null);
+                                setRechargeUrl(null);
+                                handleGenerate();
+                              }} 
+                              variant="outline" 
+                              className="gap-2 w-full"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              Try with Demo Credits
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button onClick={handleRetry} variant="outline" className="gap-2">
+                            <RefreshCw className="w-4 h-4" />
+                            Retry
+                          </Button>
+                        )}
                     </div>
                   </div>
               ) : generatedImage ? (

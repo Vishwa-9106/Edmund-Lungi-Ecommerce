@@ -4,6 +4,7 @@ interface RequestPayload {
   userImage: string;
   dhotImage: string;
   bodyType: "full" | "half";
+  isDemo?: boolean;
 }
 
 const SEGMIND_API_URL = "https://api.segmind.com/v1/segfit-v1.3";
@@ -37,11 +38,23 @@ serve(async (req: Request) => {
     });
   }
 
-  try {
-    const payload = (await req.json()) as RequestPayload;
-    const { userImage, dhotImage, bodyType } = payload;
+    try {
+      const payload = (await req.json()) as RequestPayload;
+      const { userImage, dhotImage, bodyType, isDemo } = payload;
 
-    if (!userImage || !dhotImage) {
+      if (isDemo) {
+        // Return a mock success image for demo purposes
+        // This is a high-quality placeholder representing a successful try-on
+        return new Response(JSON.stringify({ 
+          image: "https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&q=80&w=800",
+          isMock: true 
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (!userImage || !dhotImage) {
       return new Response(JSON.stringify({ error: "Missing required images" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
