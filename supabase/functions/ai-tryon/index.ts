@@ -6,11 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Realistic demo images (Base64)
-// These are representative images of a person in a dhoti
+// Fixed demo image paths (served from public folder)
 const DEMO_IMAGES = {
-  full: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800", // Placeholder for full body
-  half: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800", // Placeholder for half body
+  full: "/demo/demo-full-body.png",
+  half: "/demo/demo-half-body.png",
 };
 
 serve(async (req: Request) => {
