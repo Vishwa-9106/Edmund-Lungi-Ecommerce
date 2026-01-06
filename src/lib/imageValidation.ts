@@ -19,12 +19,14 @@ export async function validateBodyImage(file: File): Promise<ValidationResult> {
       if (width < 400 || height < 400) {
         resolve({
           valid: false,
-          error: "Image resolution too low. Please upload a higher quality photo.",
+          error: "Please upload a higher quality photo with at least 400x400 resolution.",
         });
         return;
       }
 
-      if (aspectRatio < 0.8) {
+      // Detect body type and validate based on aspect ratio
+      // Reject face-only, head-only, upper-chest-only (usually square or landscape)
+      if (aspectRatio < 1.2) {
         resolve({
           valid: false,
           error: "Please upload a half-body or full-body photo for accurate try-on.",
@@ -32,15 +34,7 @@ export async function validateBodyImage(file: File): Promise<ValidationResult> {
         return;
       }
 
-      if (aspectRatio >= 0.8 && aspectRatio < 1.2) {
-        resolve({
-          valid: false,
-          error: "Please upload a half-body or full-body photo for accurate try-on.",
-        });
-        return;
-      }
-
-      if (aspectRatio >= 1.2 && aspectRatio < 1.6) {
+      if (aspectRatio >= 1.2 && aspectRatio < 1.7) {
         resolve({
           valid: true,
           bodyType: "half",

@@ -2,12 +2,12 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 interface RequestPayload {
   userImage: string;
-  dhotImage: string;
+  dhotiImage: string;
   bodyType: "full" | "half";
-  isDemo?: boolean;
 }
 
-const SEGMIND_API_URL = "https://api.segmind.com/v1/segfit-v1.3";
+const GEMINI_MODEL = "gemini-2.5-flash-image";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 serve(async (req: Request) => {
   const origin = req.headers.get("Origin") || "*";
@@ -29,74 +29,94 @@ serve(async (req: Request) => {
     });
   }
 
-  const segmindApiKey = Deno.env.get("SEGMIND_API_KEY")?.trim();
+  const geminiApiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
 
-  if (!segmindApiKey) {
-    return new Response(JSON.stringify({ error: "Segmind API key not configured" }), {
+  if (!geminiApiKey) {
+    return new Response(JSON.stringify({ error: "Gemini API key not configured" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
 
-    try {
-      const payload = (await req.json()) as RequestPayload;
-      const { userImage, dhotImage, bodyType, isDemo } = payload;
+  try {
+    const payload = (await req.json()) as RequestPayload;
+    const { userImage, dhotiImage, bodyType } = payload;
 
-      if (isDemo) {
-        // Return a mock success image for demo purposes
-        // This is a high-quality placeholder representing a successful try-on
-        return new Response(JSON.stringify({ 
-          image: "https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&q=80&w=800",
-          isMock: true 
-        }), {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
-      }
-
-      if (!userImage || !dhotImage) {
+    if (!userImage || !dhotiImage) {
       return new Response(JSON.stringify({ error: "Missing required images" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const prompt = bodyType === "half"
-      ? "wearing traditional South Indian dhoti lungi, photorealistic, natural drape and folds, same pose and background, same face and hairstyle, generate lower body naturally wearing the dhoti"
-      : "wearing traditional South Indian dhoti lungi, photorealistic, natural drape and folds, same pose and background, same face and hairstyle, only replace lower body garment with dhoti";
+    const promptText = `Edit the provided photograph.
 
-    const segmindPayload = {
-      model_image: userImage,
-      outfit_image: dhotImage,
-      seed: -1,
-      image_format: "png",
-      image_quality: 90,
+Strict rules:
+- Do not change the face, hairstyle, skin tone, pose, or background.
+- Do not change the upper body clothing.
+- Only modify the lower body.
+
+Task:
+- Dress the person in the provided dhoti image.
+- If the full body is visible (bodyType: ${bodyType}), replace only the lower body clothing with the dhoti.
+- If the image shows only half body (bodyType: ${bodyType}), naturally generate the missing lower body and dress it with the dhoti.
+
+Style:
+- Ultra-realistic photographic quality
+- Natural fabric folds and drape
+- Correct body proportions and perspective
+- Preserve original lighting and shadows
+- The dhoti must look naturally worn, not artificial.
+
+Output:
+- High-resolution realistic photo
+- No distortion
+- No extra body parts
+- No background changes
+
+Avoid: cartoon, illustration, mannequin, doll, fake, unrealistic, extra legs, extra arms, altered face, altered background, blur, low quality`;
+
+    const geminiPayload = {
+      contents: [
+        {
+          parts: [
+            { text: promptText },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: userImage,
+              },
+            },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: dhotiImage,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        response_modalities: ["IMAGE"],
+      },
     };
 
-    const response = await fetch(SEGMIND_API_URL, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${geminiApiKey}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": segmindApiKey,
       },
-      body: JSON.stringify(segmindPayload),
+      body: JSON.stringify(geminiPayload),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Segmind API error:", response.status, errorText);
+      const errorData = await response.json();
+      console.error("Gemini API error:", response.status, errorData);
       
-      if (response.status === 401) {
-        return new Response(JSON.stringify({ error: "Invalid API key" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
-      }
-      
-      if (response.status === 406) {
+      // Handle quota/billing errors
+      if (response.status === 429 || response.status === 402 || (errorData.error?.message?.includes("quota") || errorData.error?.message?.includes("credit"))) {
         return new Response(JSON.stringify({ 
-          error: "Insufficient API credits. Please recharge your Segmind account to continue using the AI Try-On feature.",
-          rechargeUrl: "https://cloud.segmind.com/billing?type=TOPUP"
+          error: "AI preview is temporarily unavailable. Please try again later." 
         }), {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -109,30 +129,18 @@ serve(async (req: Request) => {
       });
     }
 
-    const contentType = response.headers.get("content-type") || "";
-
-    if (contentType.includes("image")) {
-      const imageBuffer = await response.arrayBuffer();
-      const base64Image = btoa(
-        new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-      );
-
-      return new Response(JSON.stringify({ image: base64Image }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
     const data = await response.json();
-    
-    if (data.image) {
-      return new Response(JSON.stringify({ image: data.image }), {
+    const candidate = data.candidates?.[0];
+    const imagePart = candidate?.content?.parts?.find((part: any) => part.inline_data);
+
+    if (imagePart?.inline_data?.data) {
+      return new Response(JSON.stringify({ image: imagePart.inline_data.data }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    return new Response(JSON.stringify({ error: "Unexpected response format" }), {
+    return new Response(JSON.stringify({ error: "No image generated by the AI" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
