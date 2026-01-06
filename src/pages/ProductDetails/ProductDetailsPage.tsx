@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, Minus, Plus, ShoppingBag, Sparkles, X, Upload } from "lucide-react";
+import { ArrowLeft, Star, Minus, Plus, ShoppingBag, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/data/products";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/supabase";
 import { WishlistHeart } from "@/components/WishlistHeart";
+import { AiTryOnModal } from "@/components/AiTryOnModal";
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
@@ -256,83 +257,31 @@ export default function ProductDetailsPage() {
               <Button
                 size="lg"
                 className="btn-primary flex-1 gap-2"
-                onClick={handleAddToCart}
-              >
-                <ShoppingBag className="w-5 h-5" />
-                Add to Cart
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="btn-outline flex-1 gap-2"
-                onClick={() => setShowTryOn(true)}
-              >
-                <Sparkles className="w-5 h-5" />
-                Try with AI
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Try-On Modal */}
-      {showTryOn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/50 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl w-full max-w-lg p-6 animate-scale-in">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-xl font-semibold">AI Try-On</h2>
-              <button
-                onClick={() => setShowTryOn(false)}
-                className="p-2 hover:bg-secondary rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div className="border-2 border-dashed border-border rounded-xl p-8 text-center">
-                <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="font-medium mb-2">Upload Your Photo</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  JPG, PNG up to 5MB
-                </p>
-                <Button variant="outline" size="sm">
-                  Choose File
+                 onClick={handleAddToCart}
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  Add to Cart
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="btn-outline flex-1 gap-2"
+                  onClick={() => setShowTryOn(true)}
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Try with AI
                 </Button>
               </div>
-
-              <div>
-                <p className="font-medium mb-3">Select Lungi Pattern</p>
-                <div className="grid grid-cols-4 gap-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="aspect-square rounded-lg bg-secondary overflow-hidden cursor-pointer hover:ring-2 ring-primary transition-all"
-                    >
-                      <img
-                        src="/placeholder.svg"
-                        alt={`Pattern ${i}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-secondary rounded-xl p-6 text-center">
-                <p className="text-muted-foreground">
-                  Preview will appear here
-                </p>
-              </div>
-
-              <Button className="w-full btn-primary gap-2" disabled>
-                <Sparkles className="w-5 h-5" />
-                Generate Try-On (Coming Soon)
-              </Button>
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
+
+        <AiTryOnModal
+          isOpen={showTryOn}
+          onClose={() => setShowTryOn(false)}
+          productImages={product.images}
+          productName={product.name}
+        />
+      </div>
+    );
+  }
