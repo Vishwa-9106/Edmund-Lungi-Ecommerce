@@ -64,6 +64,7 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
     setIsLoading(true);
     setApiError(null);
     setGeneratedImage(null);
+    const isDemoMode = true; // Flag to track if we received a demo response
 
     try {
       const userImageBase64 = await fileToBase64(userImage);
@@ -280,9 +281,9 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
             )}
           </Button>
 
-          <p className="text-xs text-muted-foreground text-center">
-            AI-assisted preview. Actual fit may vary.
-          </p>
+            <p className="text-xs text-muted-foreground text-center">
+              AI-assisted preview (demo). Real-time try-on coming soon.
+            </p>
         </div>
       </div>
     </div>
