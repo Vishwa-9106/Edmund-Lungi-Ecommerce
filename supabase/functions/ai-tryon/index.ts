@@ -10,43 +10,58 @@ const GEMINI_MODEL = "gemini-2.5-flash-image";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 serve(async (req: Request) => {
-  const origin = req.headers.get("Origin") || "*";
+  // 7. Ensure CORS headers are included in all responses
   const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Vary": "Origin",
   };
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
+  // Helper to create JSON responses (5. Always return JSON)
+  const createResponse = (body: any, status: number) => {
+    return new Response(JSON.stringify(body), {
+      status,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  }
-
-  const geminiApiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
-
-  if (!geminiApiKey) {
-    return new Response(JSON.stringify({ error: "Gemini API key not configured" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
-  }
+  };
 
   try {
-    const payload = (await req.json()) as RequestPayload;
+    if (req.method !== "POST") {
+      return createResponse({ error: "Method not allowed" }, 405);
+    }
+
+    // 2. Safely read the Gemini API key
+    const geminiApiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
+    if (!geminiApiKey) {
+      console.error("GEMINI_API_KEY is not configured in environment variables");
+      return createResponse({ error: "Gemini API key not configured" }, 500);
+    }
+
+    // 1. Add detailed validation for request body
+    let payload: RequestPayload;
+    try {
+      const rawBody = await req.text();
+      // 6. Log request payload size
+      console.log(`Request payload size: ${rawBody.length} characters`);
+      payload = JSON.parse(rawBody);
+    } catch (e) {
+      console.error("Failed to parse request body:", e);
+      return createResponse({ error: "Invalid request payload" }, 400);
+    }
+
     const { userImage, dhotiImage, bodyType } = payload;
 
-    if (!userImage || !dhotiImage) {
-      return new Response(JSON.stringify({ error: "Missing required images" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    if (
+      typeof userImage !== "string" || !userImage ||
+      typeof dhotiImage !== "string" || !dhotiImage ||
+      (bodyType !== "full" && bodyType !== "half")
+    ) {
+      console.error("Validation failed: Missing or invalid required fields");
+      return createResponse({ error: "Invalid request payload" }, 400);
     }
 
     const promptText = `Edit the provided photograph.
@@ -98,74 +113,73 @@ Output:
         response_modalities: ["IMAGE"],
       },
       safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_NONE",
-        },
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
       ],
     };
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${geminiApiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(geminiPayload),
-    });
+    // 3. Wrap the Gemini API call in try/catch
+    let response: Response;
+    try {
+      response = await fetch(`${GEMINI_API_URL}?key=${geminiApiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiPayload),
+      });
+    } catch (fetchError) {
+      console.error("Network error calling Gemini API:", fetchError);
+      return createResponse({ error: "Failed to connect to AI service" }, 502);
+    }
+
+    // 6. Log Gemini response status
+    console.log(`Gemini API response status: ${response.status}`);
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Gemini API error:", response.status, errorData);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { error: { message: "Unknown error" } };
+      }
       
-      // Handle quota/billing errors
-      if (response.status === 429 || response.status === 402 || (errorData.error?.message?.includes("quota") || errorData.error?.message?.includes("credit"))) {
-        return new Response(JSON.stringify({ 
+      // 6. Log Gemini error messages
+      console.error("Gemini API error body:", JSON.stringify(errorData));
+      
+      const errorMsg = errorData.error?.message || "";
+      if (
+        response.status === 429 || 
+        response.status === 402 || 
+        errorMsg.toLowerCase().includes("quota") || 
+        errorMsg.toLowerCase().includes("credit") ||
+        errorMsg.toLowerCase().includes("limit")
+      ) {
+        return createResponse({ 
           error: "AI preview is temporarily unavailable. Please try again later." 
-        }), {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
+        }, 503);
       }
 
-      return new Response(JSON.stringify({ error: "Failed to generate image" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return createResponse({ error: "Failed to generate AI preview" }, response.status >= 500 ? 502 : 400);
     }
 
     const data = await response.json();
+    
+    // 4. Normalize Gemini API response
     const candidate = data.candidates?.[0];
     const imagePart = candidate?.content?.parts?.find((part: any) => part.inline_data);
 
     if (imagePart?.inline_data?.data) {
-      return new Response(JSON.stringify({ image: imagePart.inline_data.data }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      // 5. Success response (Status 200)
+      return createResponse({ image: imagePart.inline_data.data }, 200);
     }
 
-    return new Response(JSON.stringify({ error: "No image generated by the AI" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    console.error("Gemini API response did not contain image data:", JSON.stringify(data));
+    return createResponse({ error: "Failed to generate AI preview" }, 502);
+
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unexpected error";
-    console.error("AI Try-On error:", msg);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    console.error("Edge Function internal error:", msg);
+    return createResponse({ error: "Internal server error" }, 500);
   }
 });
