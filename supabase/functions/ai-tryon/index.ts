@@ -81,7 +81,10 @@ serve(async (req: Request) => {
       }
       
       if (response.status === 406) {
-        return new Response(JSON.stringify({ error: "Insufficient API credits" }), {
+        return new Response(JSON.stringify({ 
+          error: "Insufficient API credits. Please recharge your Segmind account to continue using the AI Try-On feature.",
+          rechargeUrl: "https://cloud.segmind.com/billing?type=TOPUP"
+        }), {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });

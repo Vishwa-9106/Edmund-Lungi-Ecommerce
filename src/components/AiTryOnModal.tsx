@@ -23,6 +23,7 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
   const [validationError, setValidationError] = useState<string | null>(null);
   const [bodyType, setBodyType] = useState<"full" | "half" | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [rechargeUrl, setRechargeUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,6 +89,9 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
       }
 
       if (data?.error) {
+        if (data.rechargeUrl) {
+          setRechargeUrl(data.rechargeUrl);
+        }
         throw new Error(data.error);
       }
 
@@ -237,15 +241,25 @@ export function AiTryOnModal({ isOpen, onClose, productImages, productName }: Ai
                   <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mb-4" />
                   <p className="text-muted-foreground">Generating AI preview…</p>
                 </div>
-              ) : apiError ? (
-                <div className="aspect-[3/4] max-h-80 mx-auto flex flex-col items-center justify-center text-center p-4">
-                  <AlertCircle className="w-10 h-10 text-destructive mb-4" />
-                  <p className="text-destructive mb-4">{apiError}</p>
-                  <Button onClick={handleRetry} variant="outline" className="gap-2">
-                    <RefreshCw className="w-4 h-4" />
-                    Retry
-                  </Button>
-                </div>
+                ) : apiError ? (
+                  <div className="aspect-[3/4] max-h-80 mx-auto flex flex-col items-center justify-center text-center p-4">
+                    <AlertCircle className="w-10 h-10 text-destructive mb-4" />
+                    <p className="text-destructive mb-4">{apiError}</p>
+                    <div className="flex flex-col gap-2 w-full">
+                      {rechargeUrl ? (
+                        <Button asChild className="gap-2">
+                          <a href={rechargeUrl} target="_blank" rel="noopener noreferrer">
+                            Recharge Segmind Credits
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button onClick={handleRetry} variant="outline" className="gap-2">
+                          <RefreshCw className="w-4 h-4" />
+                          Retry
+                        </Button>
+                      )}
+                    </div>
+                  </div>
               ) : generatedImage ? (
                 <div className="aspect-[3/4] max-h-80 mx-auto rounded-lg overflow-hidden">
                   <img
