@@ -58,8 +58,8 @@ Strict rules:
 
 Task:
 - Dress the person in the provided dhoti image.
-- If the full body is visible (bodyType: ${bodyType}), replace only the lower body clothing with the dhoti.
-- If the image shows only half body (bodyType: ${bodyType}), naturally generate the missing lower body and dress it with the dhoti.
+- If the full body is visible, replace only the lower body clothing with the dhoti.
+- If the image shows only half body, naturally generate the missing lower body and dress it with the dhoti.
 
 Style:
 - Ultra-realistic photographic quality
@@ -72,9 +72,7 @@ Output:
 - High-resolution realistic photo
 - No distortion
 - No extra body parts
-- No background changes
-
-Avoid: cartoon, illustration, mannequin, doll, fake, unrealistic, extra legs, extra arms, altered face, altered background, blur, low quality`;
+- No background changes`;
 
     const geminiPayload = {
       contents: [
@@ -99,6 +97,24 @@ Avoid: cartoon, illustration, mannequin, doll, fake, unrealistic, extra legs, ex
       generationConfig: {
         response_modalities: ["IMAGE"],
       },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_NONE",
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_NONE",
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_NONE",
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_NONE",
+        },
+      ],
     };
 
     const response = await fetch(`${GEMINI_API_URL}?key=${geminiApiKey}`, {
