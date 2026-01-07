@@ -122,104 +122,155 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Messages</h1>
-        <p className="text-sm text-muted-foreground">View contact form messages from customers.</p>
-      </div>
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+100px)]">
+      <div className="container mx-auto px-4 py-6 md:py-8">
+        <div className="bg-card rounded-2xl shadow-lg md:border border-border overflow-hidden">
+          <div className="p-0 md:p-6">
+            <div className="px-4 py-6 md:px-0 md:py-0 md:pb-6 md:border-b border-border md:mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight">Messages</h1>
+                <p className="text-[10px] md:text-sm text-muted-foreground uppercase font-medium md:normal-case md:font-normal">Customer Inquiry Inbox</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={unreadCount > 0 ? "default" : "secondary"} className="rounded-full px-3 py-1 font-bold">
+                  {unreadCount} UNREAD
+                </Badge>
+              </div>
+            </div>
 
-      <div className="mb-4 flex items-center gap-2">
-        <Badge variant={unreadCount > 0 ? "default" : "secondary"}>Unread: {unreadCount}</Badge>
-      </div>
+            {error && <div className="mx-4 md:mx-0 mb-6 rounded-xl bg-destructive/5 border border-destructive/20 p-4 text-xs text-destructive font-medium">{error}</div>}
 
-      {error && <div className="text-sm text-destructive mb-4">{error}</div>}
-
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Sender Name</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Date &amp; Time</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              <div className="min-h-[40vh] flex flex-col items-center justify-center gap-4">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-muted-foreground animate-pulse">Loading inbox...</p>
+              </div>
             ) : messages.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
-                  No messages yet.
-                </TableCell>
-              </TableRow>
+              <div className="mx-4 md:mx-0 min-h-[40vh] flex flex-col items-center justify-center text-center space-y-4 rounded-3xl border border-dashed border-border p-12">
+                <MessageSquare className="h-12 w-12 text-muted-foreground opacity-20" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">Inbox is empty</p>
+                  <p className="text-xs text-muted-foreground">New messages will appear here when customers contact you.</p>
+                </div>
+              </div>
             ) : (
-              messages.map((m) => {
-                const status = normalizeStatus(m.read_status);
-                return (
-                  <TableRow
-                    key={m.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => openMessage(m)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") openMessage(m);
-                    }}
-                    className={cn(status === "unread" && "bg-muted/40")}
-                  >
-                    <TableCell className={cn(status === "unread" && "font-semibold")}>{m.sender_name || "-"}</TableCell>
-                    <TableCell className={cn(status === "unread" && "font-semibold")}>{m.subject || "-"}</TableCell>
-                    <TableCell>{formatDateTime(m.created_at)}</TableCell>
-                    <TableCell>
-                      <Badge variant={status === "unread" ? "default" : "secondary"}>
-                        {status === "unread" ? "Unread" : "Read"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              <div className="md:px-0">
+                {/* Mobile Inbox View */}
+                <div className="md:hidden divide-y divide-border/50">
+                  {messages.map((m) => {
+                    const status = normalizeStatus(m.read_status);
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => openMessage(m)}
+                        className={cn(
+                          "w-full text-left p-5 flex flex-col gap-1 transition-colors active:bg-accent/50",
+                          status === "unread" ? "bg-primary/5 border-l-4 border-primary" : "bg-card"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={cn("text-xs uppercase font-bold tracking-wider truncate", status === "unread" ? "text-primary" : "text-muted-foreground")}>
+                            {m.sender_name || "Anonymous"}
+                          </span>
+                          <span className="text-[10px] font-medium text-muted-foreground shrink-0">
+                            {formatDateTime(m.created_at).split(",")[0]}
+                          </span>
+                        </div>
+                        <div className={cn("text-sm leading-tight truncate", status === "unread" ? "font-bold text-foreground" : "font-medium text-muted-foreground")}>
+                          {m.subject || "(No Subject)"}
+                        </div>
+                        <div className="text-xs text-muted-foreground line-clamp-1 opacity-70">
+                          {m.message}
+                        </div>
+                        {status === "unread" && (
+                          <div className="mt-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block rounded-xl border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-bold">Sender</TableHead>
+                        <TableHead className="font-bold">Subject</TableHead>
+                        <TableHead className="font-bold">Date</TableHead>
+                        <TableHead className="font-bold">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {messages.map((m) => {
+                        const status = normalizeStatus(m.read_status);
+                        return (
+                          <TableRow
+                            key={m.id}
+                            role="button"
+                            onClick={() => openMessage(m)}
+                            className={cn("cursor-pointer hover:bg-muted/30 transition-colors", status === "unread" && "bg-primary/5 font-semibold")}
+                          >
+                            <TableCell className="py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold">{m.sender_name || "-"}</span>
+                                <span className="text-[10px] text-muted-foreground">{m.sender_email}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">{m.subject || "-"}</TableCell>
+                            <TableCell className="py-4 text-muted-foreground">{formatDateTime(m.created_at)}</TableCell>
+                            <TableCell className="py-4 text-center">
+                              <Badge variant={status === "unread" ? "default" : "secondary"} className="rounded-full">
+                                {status === "unread" ? "Unread" : "Read"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             )}
-          </TableBody>
-        </Table>
+          </div>
+        </div>
       </div>
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selected?.subject || "Message"}</DialogTitle>
-            <DialogDescription>{selected?.created_at ? formatDateTime(selected.created_at) : ""}</DialogDescription>
+        <DialogContent className="w-[95%] max-w-lg rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-primary text-primary-foreground">
+            <div className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">
+              {selected?.created_at ? formatDateTime(selected.created_at) : ""}
+            </div>
+            <DialogTitle className="text-xl font-bold leading-tight">{selected?.subject || "No Subject"}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Sender Name</div>
-              <div className="text-sm text-muted-foreground">{selected?.sender_name || "-"}</div>
+          <div className="p-6 space-y-6 bg-card">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold truncate">{selected?.sender_name || "Anonymous"}</div>
+                {selected?.sender_email && (
+                  <a href={`mailto:${selected.sender_email}`} className="text-xs text-primary underline truncate block">
+                    {selected.sender_email}
+                  </a>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Email</div>
-              {selected?.sender_email ? (
-                <a className="text-sm underline" href={`mailto:${selected.sender_email}`}>
-                  {selected.sender_email}
-                </a>
-              ) : (
-                <div className="text-sm text-muted-foreground">-</div>
-              )}
+            <div className="space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Message Body</div>
+              <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap bg-muted/30 p-4 rounded-2xl border border-border/50">
+                {selected?.message || "(Empty message)"}
+              </div>
             </div>
-
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Subject</div>
-              <div className="text-sm text-muted-foreground">{selected?.subject || "-"}</div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Message</div>
-              <div className="text-sm text-muted-foreground whitespace-pre-wrap">{selected?.message || "-"}</div>
-            </div>
+          </div>
+          <div className="p-4 bg-muted/20 flex justify-end">
+             <Button variant="ghost" onClick={() => setDetailOpen(false)} className="rounded-xl font-bold uppercase text-[10px]">Close Message</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -426,114 +426,142 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
-      <div className="container mx-auto px-4 py-6">
-        <div className="bg-card rounded-2xl shadow-lg">
-          <div className="p-4">
-            <div className="flex items-center justify-end pb-4">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+100px)]">
+      {/* Mobile Header with Sticky Add Button */}
+      <div className="md:hidden sticky top-0 z-30 w-full bg-background/95 backdrop-blur border-b border-border px-4 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Products</h1>
+          <p className="text-[10px] text-muted-foreground uppercase font-medium">Manage Inventory</p>
+        </div>
+        <Button
+          type="button"
+          onClick={openAddModal}
+          size="sm"
+          className="rounded-full px-6 h-10 font-bold uppercase text-[10px]"
+        >
+          Add Product
+        </Button>
+      </div>
+
+      <div className="container mx-auto px-4 py-6 md:py-8">
+        <div className="bg-card rounded-2xl shadow-lg md:border border-border">
+          <div className="p-0 md:p-6">
+            <div className="hidden md:flex items-center justify-between pb-6 border-b border-border mb-6">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Products</h1>
+                <p className="text-sm text-muted-foreground">Manage your store inventory and availability.</p>
+              </div>
               <Button
                 type="button"
                 onClick={openAddModal}
+                className="h-11 px-8 rounded-xl font-bold"
               >
                 Add Product
               </Button>
             </div>
 
             {loading ? (
-              <div className="text-sm text-muted-foreground">Loading...</div>
+              <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-muted-foreground animate-pulse">Loading products...</p>
+              </div>
             ) : (
-              <>
-                {error ? <div className="pb-4 text-sm text-destructive">{error}</div> : null}
+              <div className="px-4 md:px-0 py-4 md:py-0">
+                {error ? <div className="mb-6 rounded-xl bg-destructive/5 border border-destructive/20 p-4 text-sm text-destructive font-medium">{error}</div> : null}
 
                 {products.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No products found</div>
+                  <div className="min-h-[40vh] flex flex-col items-center justify-center text-center space-y-4 rounded-3xl border border-dashed border-border p-12">
+                    <Package className="h-12 w-12 text-muted-foreground opacity-20" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">No products found</p>
+                      <p className="text-xs text-muted-foreground">Start adding products to see them here.</p>
+                    </div>
+                  </div>
                 ) : (
                   <>
-                    <div className="grid gap-3 md:hidden">
+                    <div className="grid gap-6 md:hidden">
                       {products.map((p) => (
-                        <div key={p.id} className="rounded-xl border bg-background p-4 shadow-sm">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="font-medium truncate">{p.name}</div>
-                              <div className="text-sm text-muted-foreground mt-1">
-                                <span className="font-medium text-foreground">{p.price}</span>
+                        <div key={p.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0 space-y-1">
+                              <div className="font-bold text-lg leading-tight truncate">{p.name}</div>
+                              <div className="text-base font-bold text-primary">
+                                ₹{p.price.toLocaleString()}
                                 {p.original_price != null ? (
-                                  <span className="ml-2 text-muted-foreground line-through">{p.original_price}</span>
+                                  <span className="ml-2 text-sm text-muted-foreground line-through font-normal">₹{p.original_price.toLocaleString()}</span>
                                 ) : null}
                               </div>
                             </div>
 
-                            <div className="shrink-0 flex items-center gap-2">
+                            <div className="shrink-0 pt-1">
                               <Switch
                                 checked={p.is_active}
                                 disabled={!!toggleBusyIds[p.id]}
                                 onCheckedChange={(next) => handleToggleVisible(p.id, next)}
                                 aria-label="Visible"
+                                className="scale-110"
                               />
                             </div>
                           </div>
 
-                          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                            <div className="min-w-0">
-                              <div className="text-muted-foreground">Category</div>
-                              <div className="truncate">{p.category ?? ""}</div>
+                          <div className="grid grid-cols-2 gap-4 py-2 border-y border-border/50">
+                            <div className="space-y-0.5">
+                              <div className="text-[10px] uppercase font-bold text-muted-foreground">Category</div>
+                              <div className="text-xs font-semibold truncate">{p.category || "General"}</div>
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-muted-foreground">Color</div>
-                              <div className="truncate">{p.color ?? ""}</div>
+                            <div className="space-y-0.5">
+                              <div className="text-[10px] uppercase font-bold text-muted-foreground">Material</div>
+                              <div className="text-xs font-semibold truncate">{p.material || "-"}</div>
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-muted-foreground">Stock</div>
-                              <div className="truncate">{p.stock_quantity}</div>
+                            <div className="space-y-0.5">
+                              <div className="text-[10px] uppercase font-bold text-muted-foreground">In Stock</div>
+                              <div className="text-xs font-semibold">{p.stock_quantity}</div>
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-muted-foreground">ID</div>
-                              <div className="truncate">{p.id}</div>
+                            <div className="space-y-0.5">
+                              <div className="text-[10px] uppercase font-bold text-muted-foreground">Product ID</div>
+                              <div className="text-[10px] font-mono opacity-50 truncate">{p.id.slice(0, 8)}...</div>
                             </div>
                           </div>
 
-                          <div className="mt-4 flex justify-end">
+                          <div className="grid grid-cols-2 gap-3 pt-2">
+                            {isAdmin ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full h-12 rounded-xl font-bold uppercase text-[10px] tracking-wider"
+                                onClick={() => openEditModal(p)}
+                                disabled={isAdding || isUpdating}
+                              >
+                                Edit Product
+                              </Button>
+                            ) : null}
                             <AlertDialog>
-                              <div className="flex w-full flex-col gap-2">
-                                {isAdmin ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full"
-                                    onClick={() => openEditModal(p)}
-                                    disabled={isAdding || isUpdating}
-                                  >
-                                    Edit
-                                  </Button>
-                                ) : null}
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    className="w-full"
-                                    disabled={deleteBusyId === p.id}
-                                  >
-                                    Delete
-                                  </Button>
-                                </AlertDialogTrigger>
-                              </div>
-                              <AlertDialogContent>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  className="w-full h-12 rounded-xl font-bold uppercase text-[10px] tracking-wider"
+                                  disabled={deleteBusyId === p.id}
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="w-[90%] max-w-sm rounded-3xl">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                                  <AlertDialogTitle>Delete Product?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete this product?
+                                    This action cannot be undone. This product will be removed from the store.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogFooter className="flex-col gap-2 mt-4">
                                   <AlertDialogAction
                                     onClick={() => handleDeleteProduct(p.id)}
                                     disabled={deleteBusyId === p.id}
+                                    className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90"
                                   >
-                                    Delete
+                                    Confirm Delete
                                   </AlertDialogAction>
+                                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none">Cancel</AlertDialogCancel>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>

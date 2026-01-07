@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { AdminBottomNav } from "@/components/AdminBottomNav";
 import {
   BarChart3,
   ChevronLeft,
@@ -51,7 +52,7 @@ export default function AdminPage() {
 
   const navigate = useNavigate();
     const location = useLocation();
-    const isMobileOptimizedRoute = location.pathname === "/admin/dashboard" || location.pathname === "/admin/orders" || location.pathname === "/admin/sales-analytics";
+    const isMobileOptimizedRoute = location.pathname.startsWith("/admin/");
     const [logoutBusy, setLogoutBusy] = useState(false);
 
   const handleConfirmLogout = async () => {
@@ -143,6 +144,7 @@ export default function AdminPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      <AdminBottomNav />
     </div>
   );
 }
