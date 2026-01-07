@@ -716,9 +716,9 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </>
-                )}
-              </>
-            )}
+                  )}
+                </div>
+              )}
 
             <Dialog
               open={isAddOpen}
