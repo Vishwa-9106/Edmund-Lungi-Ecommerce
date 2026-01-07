@@ -427,18 +427,18 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+100px)]">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+120px)]">
       {/* Mobile Header with Sticky Add Button */}
       <div className="md:hidden sticky top-0 z-30 w-full bg-background/95 backdrop-blur border-b border-border px-4 py-4 flex items-center justify-between">
-        <div>
+        <div className="flex flex-col">
           <h1 className="text-xl font-bold tracking-tight">Products</h1>
-          <p className="text-[10px] text-muted-foreground uppercase font-medium">Manage Inventory</p>
+          <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Inventory Management</p>
         </div>
         <Button
           type="button"
           onClick={openAddModal}
           size="sm"
-          className="rounded-full px-6 h-10 font-bold uppercase text-[10px]"
+          className="rounded-xl px-5 h-11 font-bold uppercase text-[10px] shadow-sm active:scale-95 transition-transform"
         >
           Add Product
         </Button>
@@ -467,11 +467,11 @@ export default function ProductsPage() {
                 <p className="text-sm text-muted-foreground animate-pulse">Loading products...</p>
               </div>
             ) : (
-              <div className="px-4 md:px-0 py-4 md:py-0">
-                {error ? <div className="mb-6 rounded-xl bg-destructive/5 border border-destructive/20 p-4 text-sm text-destructive font-medium">{error}</div> : null}
+              <div className="px-0 md:px-0 py-4 md:py-0">
+                {error ? <div className="mx-4 md:mx-0 mb-6 rounded-xl bg-destructive/5 border border-destructive/20 p-4 text-sm text-destructive font-medium">{error}</div> : null}
 
                 {products.length === 0 ? (
-                  <div className="min-h-[40vh] flex flex-col items-center justify-center text-center space-y-4 rounded-3xl border border-dashed border-border p-12">
+                  <div className="mx-4 md:mx-0 min-h-[40vh] flex flex-col items-center justify-center text-center space-y-4 rounded-3xl border border-dashed border-border p-12">
                     <Package className="h-12 w-12 text-muted-foreground opacity-20" />
                     <div className="space-y-1">
                       <p className="text-sm font-semibold">No products found</p>
@@ -480,21 +480,21 @@ export default function ProductsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid gap-6 md:hidden">
+                    <div className="grid gap-4 md:hidden px-4">
                       {products.map((p) => (
-                        <div key={p.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+                        <div key={p.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-4">
                           <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0 space-y-1">
-                              <div className="font-bold text-lg leading-tight truncate">{p.name}</div>
-                              <div className="text-base font-bold text-primary">
-                                ₹{p.price.toLocaleString()}
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-bold text-lg leading-tight truncate mb-1">{p.name}</h3>
+                              <div className="text-base font-bold text-primary flex items-baseline gap-2">
+                                <span>₹{p.price.toLocaleString()}</span>
                                 {p.original_price != null ? (
-                                  <span className="ml-2 text-sm text-muted-foreground line-through font-normal">₹{p.original_price.toLocaleString()}</span>
+                                  <span className="text-sm text-muted-foreground line-through font-normal">₹{p.original_price.toLocaleString()}</span>
                                 ) : null}
                               </div>
                             </div>
 
-                            <div className="shrink-0 pt-1">
+                            <div className="shrink-0">
                               <Switch
                                 checked={p.is_active}
                                 disabled={!!toggleBusyIds[p.id]}
@@ -505,31 +505,31 @@ export default function ProductsPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 py-2 border-y border-border/50">
-                            <div className="space-y-0.5">
-                              <div className="text-[10px] uppercase font-bold text-muted-foreground">Category</div>
-                              <div className="text-xs font-semibold truncate">{p.category || "General"}</div>
+                          <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-4 border-y border-border/50">
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Category</p>
+                              <p className="text-sm font-semibold truncate">{p.category || "General"}</p>
                             </div>
-                            <div className="space-y-0.5">
-                              <div className="text-[10px] uppercase font-bold text-muted-foreground">Material</div>
-                              <div className="text-xs font-semibold truncate">{p.material || "-"}</div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Material</p>
+                              <p className="text-sm font-semibold truncate">{p.material || "-"}</p>
                             </div>
-                            <div className="space-y-0.5">
-                              <div className="text-[10px] uppercase font-bold text-muted-foreground">In Stock</div>
-                              <div className="text-xs font-semibold">{p.stock_quantity}</div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">In Stock</p>
+                              <p className="text-sm font-semibold">{p.stock_quantity}</p>
                             </div>
-                            <div className="space-y-0.5">
-                              <div className="text-[10px] uppercase font-bold text-muted-foreground">Product ID</div>
-                              <div className="text-[10px] font-mono opacity-50 truncate">{p.id.slice(0, 8)}...</div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Product ID</p>
+                              <p className="text-[11px] font-mono opacity-60 truncate">{p.id}</p>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3 pt-2">
+                          <div className="flex items-center gap-3 pt-1">
                             {isAdmin ? (
                               <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full h-12 rounded-xl font-bold uppercase text-[10px] tracking-wider"
+                                className="flex-1 h-12 rounded-xl font-bold uppercase text-[11px] tracking-wider active:scale-95 transition-transform"
                                 onClick={() => openEditModal(p)}
                                 disabled={isAdding || isUpdating}
                               >
@@ -541,28 +541,28 @@ export default function ProductsPage() {
                                 <Button
                                   type="button"
                                   variant="destructive"
-                                  className="w-full h-12 rounded-xl font-bold uppercase text-[10px] tracking-wider"
+                                  className="flex-1 h-12 rounded-xl font-bold uppercase text-[11px] tracking-wider active:scale-95 transition-transform"
                                   disabled={deleteBusyId === p.id}
                                 >
                                   Delete
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent className="w-[90%] max-w-sm rounded-3xl">
+                              <AlertDialogContent className="w-[92%] max-w-sm rounded-3xl p-6">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete Product?</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     This action cannot be undone. This product will be removed from the store.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter className="flex-col gap-2 mt-4">
+                                <AlertDialogFooter className="flex-col gap-2 mt-6">
                                   <AlertDialogAction
                                     onClick={() => handleDeleteProduct(p.id)}
                                     disabled={deleteBusyId === p.id}
-                                    className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90"
+                                    className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 font-bold"
                                   >
                                     Confirm Delete
                                   </AlertDialogAction>
-                                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none">Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none font-bold">Cancel</AlertDialogCancel>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
