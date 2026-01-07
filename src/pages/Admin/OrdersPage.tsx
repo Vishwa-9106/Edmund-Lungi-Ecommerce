@@ -195,6 +195,10 @@ export default function OrdersPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderModalCache, setOrderModalCache] = useState<Record<string, OrderModalData>>({});
 
+  const userIds = useMemo(() => {
+    return Array.from(new Set(orders.map((o) => o.user_id)));
+  }, [orders]);
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -562,8 +566,11 @@ export default function OrdersPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </div>
-        </nav>
+            </div>
+          </nav>
+        </div>
+      );
+    }
 
   return (
     <div className="p-6">
