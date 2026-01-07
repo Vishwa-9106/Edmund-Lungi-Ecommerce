@@ -116,39 +116,32 @@ export default function CustomersPage() {
               </div>
             ) : (
               <div className="px-4 md:px-0">
-                {/* Mobile List View */}
-                <div className="grid gap-4 md:hidden">
-                  {customers.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-card shadow-sm active:scale-[0.98] transition-transform"
-                    >
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <span className="text-lg font-bold text-primary">
-                          {(c.name || "U")[0].toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="font-bold text-base leading-tight truncate">
-                          {c.name || "Unknown User"}
+                  {/* Mobile List View */}
+                  <div className="flex flex-col gap-3 md:hidden">
+                    {customers.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center w-full min-h-[72px] p-4 rounded-2xl border border-border bg-card shadow-sm active:scale-[0.98] transition-transform"
+                      >
+                        <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-base font-bold text-primary">
+                            {(c.name || "U")[0].toUpperCase()}
+                          </span>
                         </div>
-                        <div className="text-xs text-muted-foreground truncate opacity-70">
-                          {c.email || "No email provided"}
-                        </div>
-                        <div className="flex items-center gap-3 pt-1">
-                          <div className="text-[10px] font-bold uppercase tracking-wider bg-secondary px-2 py-0.5 rounded-full">
-                            {c.no_of_orders ?? 0} Orders
+                        <div className="min-w-0 flex-1 flex flex-col justify-center ml-3 overflow-hidden">
+                          <div className="font-bold text-sm leading-snug truncate">
+                            {c.name || "Unknown User"}
                           </div>
-                          {c.mobile && (
-                            <div className="text-[10px] font-medium text-muted-foreground">
-                              {c.mobile}
-                            </div>
-                          )}
+                          <div className="text-xs text-muted-foreground truncate opacity-70">
+                            {c.email || "No email provided"}
+                          </div>
+                        </div>
+                        <div className="shrink-0 ml-3 flex items-center justify-center min-w-[52px] h-7 rounded-full bg-secondary text-[10px] font-bold uppercase tracking-wide">
+                          {c.no_of_orders ?? 0} Orders
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
                 {/* Desktop Table View */}
                 <div className="hidden md:block rounded-xl border border-border overflow-hidden">
