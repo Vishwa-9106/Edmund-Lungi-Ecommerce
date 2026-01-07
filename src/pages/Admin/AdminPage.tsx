@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3,
   ChevronLeft,
@@ -50,6 +50,8 @@ export default function AdminPage() {
   );
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDashboard = location.pathname === "/admin/dashboard";
   const [logoutBusy, setLogoutBusy] = useState(false);
 
   const handleConfirmLogout = async () => {
@@ -71,7 +73,8 @@ export default function AdminPage() {
         <aside
           className={cn(
             "shrink-0 border-r border-border bg-background transition-[width] duration-200",
-            collapsed ? "w-16" : "w-64"
+            collapsed ? "w-16" : "w-64",
+            isDashboard && "hidden md:block"
           )}
         >
           <div className="h-16 flex items-center justify-between px-3">
@@ -114,12 +117,12 @@ export default function AdminPage() {
           </nav>
         </aside>
 
-        <main className="flex-1">
+        <main className="flex-1 overflow-x-hidden">
           <Outlet />
         </main>
       </div>
 
-      <div className="fixed bottom-4 left-4 z-50">
+      <div className={cn("fixed bottom-4 left-4 z-50", isDashboard && "hidden md:block")}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button type="button" variant="outline" size="sm" disabled={logoutBusy}>

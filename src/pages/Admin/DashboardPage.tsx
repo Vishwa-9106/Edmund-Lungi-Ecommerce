@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { supabase } from "@/supabase";
 import { StatCard } from "@/components/StatCard";
 import { ChartCard } from "@/components/ChartCard";
@@ -21,7 +21,22 @@ import {
   ShoppingBag,
   TrendingUp,
   MessageSquare,
+  LayoutDashboard,
+  LogOut,
+  RefreshCw,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type OrderStatus = "Pending" | "Confirmed" | "Processing" | "Shipped" | "Delivered" | "Completed" | "Cancelled";
 
@@ -51,7 +66,6 @@ const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   Completed: "#16A34A",
   Cancelled: "#EF4444",
 };
-
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -125,7 +139,7 @@ export default function DashboardPage() {
     const tabletMq = window.matchMedia("(max-width: 1023px)");
 
     const recompute = () => {
-      const compact = mobileMq.matches || (standaloneMq.matches && tabletMq.matches);
+      const compact = mobileMq.matches || standaloneMq.matches;
       setUseCompactLayout(compact);
     };
 
@@ -146,6 +160,7 @@ export default function DashboardPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [logoutBusy, setLogoutBusy] = useState(false);
 
   const [todaysOrdersCount, setTodaysOrdersCount] = useState(0);
   const [todaysRevenue, setTodaysRevenue] = useState(0);
@@ -418,248 +433,240 @@ export default function DashboardPage() {
     void fetchDashboard();
   }, [fetchDashboard]);
 
+  const handleLogout = async () => {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    try {
+      await supabase.auth.signOut();
+      navigate("/", { replace: true });
+    } finally {
+      setLogoutBusy(false);
+    }
+  };
+
   const empty = !loading && !error && todaysOrdersCount === 0 && recentOrders.length === 0;
 
   if (useCompactLayout) {
     return (
-      <div className="admin-dashboard p-4 sm:p-6">
-        <div className="mb-4 space-y-3">
+      <div className="admin-dashboard-mobile flex flex-col min-h-screen bg-background text-foreground overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+80px)]">
+        {/* Minimal Header */}
+        <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Quick overview</p>
+            <h1 className="text-lg font-bold tracking-tight">Admin Dashboard</h1>
+            <p className="text-[10px] text-muted-foreground uppercase font-medium">Lungi Store Control</p>
           </div>
-
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
+            size="icon"
             onClick={() => void fetchDashboard()}
             disabled={loading}
-            className="w-full h-12"
+            className="rounded-full hover:bg-accent"
           >
-            Refresh
+            <RefreshCw className={cn("h-5 w-5", loading && "animate-spin")} />
           </Button>
-        </div>
+        </header>
 
-        {loading ? (
-          <div className="min-h-[240px] flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : error ? (
-          <div className="rounded-md border border-border bg-background p-4">
-            <div className="text-sm font-medium">Failed to load dashboard</div>
-            <div className="text-sm text-muted-foreground">{error}</div>
-          </div>
-        ) : empty ? (
-          <div className="rounded-md border border-border bg-background p-6 text-center">
-            <div className="text-sm font-medium">No dashboard data yet</div>
-            <div className="text-sm text-muted-foreground">
-              Once orders and products are added, you’ll see a live overview here.
+        <main className="flex-1 p-4 space-y-4 max-w-md mx-auto w-full">
+          {loading ? (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground animate-pulse">Syncing store data...</p>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <StatCard title="Today’s Orders" value={todaysOrdersCount} icon={ShoppingBag} className="min-h-[112px]" />
-              <StatCard title="Today’s Revenue" value={`₹${formatINR(todaysRevenue)}`} icon={TrendingUp} className="min-h-[112px]" />
-              <StatCard title="Pending Orders" value={pendingOrdersCount} icon={ShoppingBag} className="min-h-[112px]" />
-              <StatCard title="Low Stock Products" value={lowStockCount} icon={Package} className="min-h-[112px]" />
+          ) : error ? (
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-center space-y-3">
+              <div className="text-sm font-semibold text-destructive">Dashboard Unavailable</div>
+              <p className="text-xs text-muted-foreground">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => void fetchDashboard()}>Retry</Button>
             </div>
-
-            <ChartCard title="Recent Orders" subtitle="Latest 10">
-              <div className="mb-3">
-                <Button type="button" variant="outline" onClick={() => navigate("/admin/orders")} className="w-full h-12">
-                  Go to Orders Page
-                </Button>
+          ) : empty ? (
+            <div className="rounded-2xl border border-border bg-background p-10 text-center space-y-4">
+              <div className="mx-auto w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+                <LayoutDashboard className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-semibold">No Activity Yet</div>
+                <p className="text-xs text-muted-foreground">Orders and inventory stats will appear here as they happen.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 gap-3">
+                <StatCard 
+                  title="Today’s Orders" 
+                  value={todaysOrdersCount} 
+                  icon={ShoppingBag} 
+                  className="min-h-[112px] border-none bg-primary/5 hover:bg-primary/10 transition-colors" 
+                />
+                <StatCard 
+                  title="Today’s Revenue" 
+                  value={`₹${formatINR(todaysRevenue)}`} 
+                  icon={TrendingUp} 
+                  className="min-h-[112px] border-none bg-green-500/5 hover:bg-green-500/10 transition-colors" 
+                />
+                <StatCard 
+                  title="Pending Orders" 
+                  value={pendingOrdersCount} 
+                  icon={ShoppingBag} 
+                  className="min-h-[112px] border-none bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors" 
+                />
+                <StatCard 
+                  title="Low Stock" 
+                  value={lowStockCount} 
+                  icon={Package} 
+                  className="min-h-[112px] border-none bg-destructive/5 hover:bg-destructive/10 transition-colors" 
+                />
               </div>
 
-              {recentOrders.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No orders found.</div>
-              ) : (
-                <div className="space-y-3">
-                  {recentOrders.map((o) => {
-                    const status = normalizeStatus(o.status);
-                    return (
-                      <div key={o.id} className="rounded-md border border-border bg-background p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-sm font-semibold truncate" title={o.order_number || o.id}>
-                              {o.order_number ? `Order #${o.order_number}` : `Order #${o.id}`}
+              {/* Recent Orders - Card Based */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Recent Orders</h2>
+                  <Button variant="link" size="sm" onClick={() => navigate("/admin/orders")} className="h-auto p-0 text-xs">View All</Button>
+                </div>
+                
+                {recentOrders.length === 0 ? (
+                  <div className="text-xs text-muted-foreground text-center py-4 bg-secondary/20 rounded-xl">No recent orders.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentOrders.map((o) => {
+                      const status = normalizeStatus(o.status);
+                      return (
+                        <div key={o.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm active:scale-[0.98] transition-transform" onClick={() => navigate("/admin/orders")}>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="text-sm font-bold">#{o.order_number || o.id.slice(0, 8)}</div>
+                              <div className="text-[10px] text-muted-foreground font-medium">{timeAgo(o.created_at)}</div>
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">{formatDateTime(o.created_at)}</div>
+                            <Badge className={cn("text-[10px] uppercase font-bold px-2 py-0.5", statusBadgeClassName(status))} style={statusBadgeStyle(status)}>
+                              {status}
+                            </Badge>
                           </div>
-                          <Badge className={statusBadgeClassName(status)} style={statusBadgeStyle(status)}>
-                            {status}
-                          </Badge>
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="text-lg font-black">₹{formatINR(normalizeTotal(o.total))}</div>
+                            <Button size="sm" variant="secondary" className="h-8 rounded-full text-[10px] font-bold uppercase">Details</Button>
+                          </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <div className="text-sm font-semibold">₹{formatINR(normalizeTotal(o.total))}</div>
-                          <Button type="button" variant="outline" size="sm" className="h-12" onClick={() => navigate("/admin/orders")}>
-                            View
-                          </Button>
+              {/* Critical Attention */}
+              {attentionOrders.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Needs Attention</h2>
+                  </div>
+                  <div className="space-y-2">
+                    {attentionOrders.slice(0, 3).map((o) => (
+                      <div key={o.id} className="rounded-xl border border-destructive/10 bg-destructive/5 p-3 flex items-center justify-between">
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Order #{o.order_number || o.id.slice(0, 8)}</div>
+                          <div className="text-[10px] text-destructive/70 font-medium">Stale: {timeAgo(o.created_at)}</div>
                         </div>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full text-destructive" onClick={() => navigate("/admin/orders")}>
+                          <Plus className="h-4 w-4 rotate-45" />
+                        </Button>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               )}
-            </ChartCard>
 
-            <ChartCard title="Orders Requiring Attention" subtitle="Stale orders by status & age">
-              {attentionOrders.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No orders currently require attention.</div>
-              ) : (
-                <div className="space-y-3">
-                  {attentionOrders.map((o) => {
-                    const status = normalizeStatus(o.status);
-                    return (
-                      <div key={o.id} className="rounded-md border border-border bg-yellow-500/10 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-sm font-semibold truncate" title={o.order_number || o.id}>
-                              {o.order_number ? `Order #${o.order_number}` : `Order #${o.id}`}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">{timeAgo(o.created_at)}</div>
-                          </div>
-                          <Badge className={statusBadgeClassName(status)} style={statusBadgeStyle(status)}>
-                            {status}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* Quick Hub */}
+              <div className="space-y-3">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground px-1">Quick Actions</h2>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={() => navigate("/admin/products")} className="h-20 flex-col gap-1 rounded-2xl bg-background border-border hover:bg-accent text-foreground shadow-sm">
+                    <Plus className="h-5 w-5 text-primary" />
+                    <span className="text-[10px] font-bold uppercase">Add Lungi</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/admin/orders")} className="h-20 flex-col gap-1 rounded-2xl bg-background border-border shadow-sm">
+                    <ShoppingBag className="h-5 w-5 text-green-500" />
+                    <span className="text-[10px] font-bold uppercase">Orders</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/admin/marketing")} className="h-20 flex-col gap-1 rounded-2xl bg-background border-border shadow-sm">
+                    <Megaphone className="h-5 w-5 text-orange-500" />
+                    <span className="text-[10px] font-bold uppercase">Marketing</span>
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/admin/messages")} className="h-20 flex-col gap-1 rounded-2xl bg-background border-border shadow-sm">
+                    <MessageSquare className="h-5 w-5 text-blue-500" />
+                    <span className="text-[10px] font-bold uppercase">Messages</span>
+                  </Button>
                 </div>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Mobile Admin Bottom Nav */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+          <div className="max-w-md mx-auto rounded-2xl border border-border bg-background/90 backdrop-blur-xl shadow-2xl p-1 grid grid-cols-5">
+            <NavLink 
+              to="/admin/dashboard" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
               )}
-            </ChartCard>
-
-            <ChartCard title="Inventory Alerts" subtitle="Low stock and out of stock">
-              <div className="space-y-4">
-                <div>
-                  <div className="text-sm font-medium">Out of Stock</div>
-                  {outOfStockProducts.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">None</div>
-                  ) : (
-                    <div className="mt-2 space-y-2">
-                      {outOfStockProducts.map((p) => (
-                        <div key={p.id} className="rounded-md border border-border bg-background p-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0 text-sm font-medium truncate" title={p.name}>
-                              {p.name}
-                            </div>
-                            <div className="text-sm font-semibold text-destructive">0</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <div className="text-sm font-medium">Low Stock</div>
-                  {lowStockProducts.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">None</div>
-                  ) : (
-                    <div className="mt-2 space-y-2">
-                      {lowStockProducts.map((p) => {
-                        const critical = p.stock_quantity <= 5;
-                        return (
-                          <div key={p.id} className="rounded-md border border-border bg-background p-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0 text-sm font-medium truncate" title={p.name}>
-                                {p.name}
-                              </div>
-                              <div className={critical ? "text-sm font-semibold text-destructive" : "text-sm font-semibold"}>
-                                {p.stock_quantity}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <Button type="button" variant="outline" onClick={() => navigate("/admin/products")} className="w-full h-12">
-                  Update Stock
-                </Button>
-              </div>
-            </ChartCard>
-
-            <ChartCard title="Customer Activity" subtitle="Recent registrations & orders">
-              {activityFeed.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No recent activity.</div>
-              ) : (
-                <div className="space-y-3">
-                  {activityFeed.map((a, idx) => (
-                    <div key={`${a.type}-${a.created_at}-${idx}`} className="rounded-md border border-border bg-background p-3">
-                      <div className="text-sm font-medium">
-                        {a.type === "user_registered"
-                          ? "New user registered"
-                          : a.type === "first_order"
-                            ? "First order placed"
-                            : "Repeat customer order"}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {timeAgo(a.created_at)} · {a.type === "user_registered" ? a.user_id : `${a.user_id} · ${a.order_number ?? "-"}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            >
+              <LayoutDashboard className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Home</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/orders" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
               )}
-            </ChartCard>
-
-            <ChartCard title="Quick Admin Actions" subtitle="Navigation hub">
-              <div className="grid gap-2">
-                <Button type="button" onClick={() => navigate("/admin/products")} className="h-12 justify-start gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Product
-                </Button>
-                <Button type="button" variant="outline" onClick={() => navigate("/admin/orders")} className="h-12 justify-start gap-2">
-                  <ShoppingBag className="h-4 w-4" />
-                  View Orders
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate("/admin/sales-analytics")}
-                  className="h-12 justify-start gap-2"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  Sales Analytics
-                </Button>
-                <Button type="button" variant="outline" onClick={() => navigate("/admin/marketing")} className="h-12 justify-start gap-2">
-                  <Megaphone className="h-4 w-4" />
-                  Marketing
-                </Button>
-                <Button type="button" variant="outline" onClick={() => navigate("/admin/messages")} className="h-12 justify-start gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Messages
-                </Button>
-              </div>
-            </ChartCard>
-
-            <ChartCard title="System Health & Store Status" subtitle="Quick status checks">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-muted-foreground">Store status</div>
-                  <Badge variant="secondary">Active</Badge>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-muted-foreground">Last order time</div>
-                  <div className="font-medium text-right">{formatDateTime(lastOrderTime)}</div>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-muted-foreground">Last product added</div>
-                  <div className="font-medium text-right">{formatDateTime(lastProductAddedTime)}</div>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-muted-foreground">Total active products</div>
-                  <div className="font-medium">{totalActiveProducts}</div>
-                </div>
-              </div>
-            </ChartCard>
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Orders</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/products" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <Package className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Lungi</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/sales-analytics" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Sales</span>
+            </NavLink>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="flex flex-col items-center justify-center py-2 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-[8px] font-bold uppercase mt-1">Exit</span>
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="w-[90%] max-w-sm rounded-3xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Admin Logout</AlertDialogTitle>
+                  <AlertDialogDescription>Are you sure you want to sign out of the admin panel?</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col gap-2 mt-4">
+                  <AlertDialogAction onClick={handleLogout} disabled={logoutBusy} className="w-full h-12 rounded-xl">Logout</AlertDialogAction>
+                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none">Cancel</AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        )}
+        </nav>
       </div>
     );
   }
