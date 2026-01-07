@@ -50,9 +50,9 @@ export default function AdminPage() {
   );
 
   const navigate = useNavigate();
-  const location = useLocation();
-  const isDashboard = location.pathname === "/admin/dashboard";
-  const [logoutBusy, setLogoutBusy] = useState(false);
+    const location = useLocation();
+    const isMobileOptimizedRoute = location.pathname === "/admin/dashboard" || location.pathname === "/admin/orders";
+    const [logoutBusy, setLogoutBusy] = useState(false);
 
   const handleConfirmLogout = async () => {
     if (logoutBusy) return;
@@ -71,11 +71,11 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
         <aside
-          className={cn(
-            "shrink-0 border-r border-border bg-background transition-[width] duration-200",
-            collapsed ? "w-16" : "w-64",
-            isDashboard && "hidden md:block"
-          )}
+            className={cn(
+              "shrink-0 border-r border-border bg-background transition-[width] duration-200",
+              collapsed ? "w-16" : "w-64",
+              isMobileOptimizedRoute && "hidden md:block"
+            )}
         >
           <div className="h-16 flex items-center justify-between px-3">
             <div className={cn("min-w-0", collapsed && "sr-only")}> </div>
@@ -122,7 +122,7 @@ export default function AdminPage() {
         </main>
       </div>
 
-      <div className={cn("fixed bottom-4 left-4 z-50", isDashboard && "hidden md:block")}>
+      <div className={cn("fixed bottom-4 left-4 z-50", isMobileOptimizedRoute && "hidden md:block")}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button type="button" variant="outline" size="sm" disabled={logoutBusy}>

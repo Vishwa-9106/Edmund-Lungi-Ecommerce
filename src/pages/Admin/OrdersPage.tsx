@@ -1,8 +1,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, NavLink } from "react-router-dom";
 import { supabase } from "@/supabase";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  BarChart3,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  RefreshCw,
+  ShoppingBag,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -140,59 +161,68 @@ function statusBadgeVariant(status: OrderStatus): "default" | "secondary" | "des
 }
 
 export default function OrdersPage() {
+  const navigate = useNavigate();
+  const [useCompactLayout, setUseCompactLayout] = useState(false);
+
+  useEffect(() => {
+    const standaloneMq = window.matchMedia("(display-mode: standalone)");
+    const mobileMq = window.matchMedia("(max-width: 768px)");
+
+    const recompute = () => {
+      setUseCompactLayout(mobileMq.matches || standaloneMq.matches);
+    };
+
+    recompute();
+    standaloneMq.addEventListener("change", recompute);
+    mobileMq.addEventListener("change", recompute);
+    window.addEventListener("resize", recompute);
+
+    return () => {
+      standaloneMq.removeEventListener("change", recompute);
+      mobileMq.removeEventListener("change", recompute);
+      window.removeEventListener("resize", recompute);
+    };
+  }, []);
+
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingOrderIds, setUpdatingOrderIds] = useState<Set<string>>(new Set());
   const [userEmails, setUserEmails] = useState<UserEmailById>({});
+  const [logoutBusy, setLogoutBusy] = useState(false);
 
   const [itemsDialogOpen, setItemsDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderModalCache, setOrderModalCache] = useState<Record<string, OrderModalData>>({});
 
-  const userIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const o of orders) {
-      if (o.user_id) ids.add(o.user_id);
-    }
-    return Array.from(ids);
-  }, [orders]);
-
-  useEffect(() => {
-    let alive = true;
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("orders")
+        .select("id, user_id, order_number, status, total, currency, items, created_at")
+        .order("created_at", { ascending: false });
 
-    (async () => {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from("orders")
-          .select("id, user_id, order_number, status, total, currency, items, created_at")
-          .order("created_at", { ascending: false });
-
-        if (!alive) return;
-        if (fetchError) {
-          setOrders([]);
-          setError(fetchError.message || "Failed to load orders");
-          return;
-        }
-
-        const rows = Array.isArray(data) ? (data as OrderRow[]) : [];
-        setOrders(rows);
-      } catch (e: any) {
-        if (!alive) return;
+      if (fetchError) {
         setOrders([]);
-        setError(e?.message || "Failed to load orders");
-      } finally {
-        if (!alive) return;
-        setLoading(false);
+        setError(fetchError.message || "Failed to load orders");
+        return;
       }
-    })();
 
-    return () => {
-      alive = false;
-    };
+      const rows = Array.isArray(data) ? (data as OrderRow[]) : [];
+      setOrders(rows);
+    } catch (e: any) {
+      setOrders([]);
+      setError(e?.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const selectedOrder = useMemo(() => {
     if (!selectedOrderId) return null;
@@ -346,6 +376,194 @@ export default function OrdersPage() {
       });
     }
   };
+
+  const handleLogout = async () => {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    try {
+      await supabase.auth.signOut();
+      navigate("/", { replace: true });
+    } finally {
+      setLogoutBusy(false);
+    }
+  };
+
+  if (useCompactLayout) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background text-foreground overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+80px)]">
+        {/* Minimal Header */}
+        <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 h-16 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Orders</h1>
+            <p className="text-[10px] text-muted-foreground uppercase font-medium">Customer Transactions</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => void fetchOrders()}
+            disabled={loading}
+            className="rounded-full hover:bg-accent"
+          >
+            <RefreshCw className={cn("h-5 w-5", loading && "animate-spin")} />
+          </Button>
+        </header>
+
+        <main className="flex-1 p-4 space-y-4 max-w-md mx-auto w-full">
+          {loading ? (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground animate-pulse">Fetching orders...</p>
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-center space-y-3">
+              <div className="text-sm font-semibold text-destructive">Failed to load orders</div>
+              <p className="text-xs text-muted-foreground">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => void fetchOrders()}>Retry</Button>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-background p-10 text-center space-y-4">
+              <div className="mx-auto w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+                <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-semibold">No Orders Yet</div>
+                <p className="text-xs text-muted-foreground">When customers place orders, they will appear here.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map((order) => {
+                const status = normalizeStatus(order.status);
+                const updating = updatingOrderIds.has(order.id);
+                const userLabel = userEmails[order.user_id] || order.user_id;
+
+                return (
+                  <div key={order.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm active:scale-[0.98] transition-transform">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="space-y-1">
+                        <div className="text-sm font-bold">#{order.order_number || order.id.slice(0, 8)}</div>
+                        <div className="text-[10px] text-muted-foreground font-medium">{formatDateTime(order.created_at)}</div>
+                      </div>
+                      <Badge variant={statusBadgeVariant(status)} className="text-[10px] uppercase font-bold">
+                        {status}
+                      </Badge>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="text-xs text-muted-foreground mb-1">Customer</div>
+                      <div className="text-sm font-medium truncate" title={userLabel}>{userLabel}</div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Total</div>
+                        <div className="text-lg font-black">{formatMoney(order.total, order.currency)} {order.currency || ""}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-10 rounded-xl px-4 text-[10px] font-bold uppercase"
+                        onClick={() => {
+                          setSelectedOrderId(order.id);
+                          setItemsDialogOpen(true);
+                          void ensureModalDataLoaded(order);
+                        }}
+                      >
+                        View Items
+                      </Button>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <div className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Update Status</div>
+                      <Select
+                        value={status}
+                        onValueChange={(v) => handleStatusChange(order.id, v as OrderStatus)}
+                        disabled={updating}
+                      >
+                        <SelectTrigger className="h-12 rounded-xl bg-muted/50 border-none">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALL_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+
+        {/* Mobile Admin Bottom Nav */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+          <div className="max-w-md mx-auto rounded-2xl border border-border bg-background/90 backdrop-blur-xl shadow-2xl p-1 grid grid-cols-5">
+            <NavLink 
+              to="/admin/dashboard" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <LayoutDashboard className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Home</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/orders" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Orders</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/products" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <Package className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Lungi</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/sales-analytics" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Sales</span>
+            </NavLink>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="flex flex-col items-center justify-center py-2 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-[8px] font-bold uppercase mt-1">Exit</span>
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="w-[90%] max-w-sm rounded-3xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Admin Logout</AlertDialogTitle>
+                  <AlertDialogDescription>Are you sure you want to sign out of the admin panel?</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col gap-2 mt-4">
+                  <AlertDialogAction onClick={handleLogout} disabled={logoutBusy} className="w-full h-12 rounded-xl">Logout</AlertDialogAction>
+                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none">Cancel</AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </nav>
 
   return (
     <div className="p-6">
