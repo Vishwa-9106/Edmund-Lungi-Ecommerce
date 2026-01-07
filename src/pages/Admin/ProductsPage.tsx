@@ -480,96 +480,96 @@ export default function ProductsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid gap-4 md:hidden px-4">
-                      {products.map((p) => (
-                        <div key={p.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-lg leading-tight truncate mb-1">{p.name}</h3>
-                              <div className="text-base font-bold text-primary flex items-baseline gap-2">
-                                <span>₹{p.price.toLocaleString()}</span>
-                                {p.original_price != null ? (
-                                  <span className="text-sm text-muted-foreground line-through font-normal">₹{p.original_price.toLocaleString()}</span>
-                                ) : null}
+                      <div className="grid gap-4 md:hidden px-4">
+                        {products.map((p) => (
+                          <div key={p.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm w-full overflow-hidden">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0 flex-1 text-left">
+                                <h3 className="font-bold text-lg leading-tight truncate mb-1 text-left">{p.name}</h3>
+                                <div className="text-base font-bold text-primary flex items-baseline gap-2 justify-start">
+                                  <span>₹{p.price.toLocaleString()}</span>
+                                  {p.original_price != null ? (
+                                    <span className="text-sm text-muted-foreground line-through font-normal">₹{p.original_price.toLocaleString()}</span>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 pt-1">
+                                <Switch
+                                  checked={p.is_active}
+                                  disabled={!!toggleBusyIds[p.id]}
+                                  onCheckedChange={(next) => handleToggleVisible(p.id, next)}
+                                  aria-label="Visible"
+                                  className="scale-110"
+                                />
                               </div>
                             </div>
 
-                            <div className="shrink-0">
-                              <Switch
-                                checked={p.is_active}
-                                disabled={!!toggleBusyIds[p.id]}
-                                onCheckedChange={(next) => handleToggleVisible(p.id, next)}
-                                aria-label="Visible"
-                                className="scale-110"
-                              />
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-6 py-4 border-y border-border/50 my-4">
+                              <div className="min-w-0 w-full">
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1 tracking-wider">Category</p>
+                                <p className="text-sm font-semibold truncate text-left">{p.category || "General"}</p>
+                              </div>
+                              <div className="min-w-0 w-full">
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1 tracking-wider">Material</p>
+                                <p className="text-sm font-semibold truncate text-left">{p.material || "-"}</p>
+                              </div>
+                              <div className="min-w-0 w-full">
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1 tracking-wider">Stock</p>
+                                <p className="text-sm font-semibold text-left">{p.stock_quantity}</p>
+                              </div>
+                              <div className="min-w-0 w-full">
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1 tracking-wider">Product ID</p>
+                                <p className="text-[11px] font-mono opacity-60 truncate text-left">{p.id}</p>
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-4 border-y border-border/50">
-                            <div className="min-w-0">
-                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Category</p>
-                              <p className="text-sm font-semibold truncate">{p.category || "General"}</p>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Material</p>
-                              <p className="text-sm font-semibold truncate">{p.material || "-"}</p>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">In Stock</p>
-                              <p className="text-sm font-semibold">{p.stock_quantity}</p>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Product ID</p>
-                              <p className="text-[11px] font-mono opacity-60 truncate">{p.id}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 pt-1">
-                            {isAdmin ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="flex-1 h-12 rounded-xl font-bold uppercase text-[11px] tracking-wider active:scale-95 transition-transform"
-                                onClick={() => openEditModal(p)}
-                                disabled={isAdding || isUpdating}
-                              >
-                                Edit Product
-                              </Button>
-                            ) : null}
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
+                            <div className="flex items-center gap-3 w-full">
+                              {isAdmin ? (
                                 <Button
                                   type="button"
-                                  variant="destructive"
-                                  className="flex-1 h-12 rounded-xl font-bold uppercase text-[11px] tracking-wider active:scale-95 transition-transform"
-                                  disabled={deleteBusyId === p.id}
+                                  variant="outline"
+                                  className="flex-1 h-12 rounded-xl font-bold uppercase text-[11px] tracking-wider active:scale-95 transition-transform min-w-0"
+                                  onClick={() => openEditModal(p)}
+                                  disabled={isAdding || isUpdating}
                                 >
-                                  Delete
+                                  Edit Product
                                 </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="w-[92%] max-w-sm rounded-3xl p-6">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Product?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This product will be removed from the store.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter className="flex-col gap-2 mt-6">
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteProduct(p.id)}
+                              ) : null}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="flex-1 h-12 rounded-xl font-bold uppercase text-[11px] tracking-wider active:scale-95 transition-transform min-w-0"
                                     disabled={deleteBusyId === p.id}
-                                    className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 font-bold"
                                   >
-                                    Confirm Delete
-                                  </AlertDialogAction>
-                                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none font-bold">Cancel</AlertDialogCancel>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="w-[92%] max-w-sm rounded-3xl p-6">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Product?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This product will be removed from the store.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex-col gap-2 mt-6">
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteProduct(p.id)}
+                                      disabled={deleteBusyId === p.id}
+                                      className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 font-bold"
+                                    >
+                                      Confirm Delete
+                                    </AlertDialogAction>
+                                    <AlertDialogCancel className="w-full h-12 rounded-xl border-none font-bold">Cancel</AlertDialogCancel>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
 
                     <div className="hidden md:block">
                       <div className="w-full overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable]">
