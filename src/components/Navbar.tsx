@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingBag, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,33 @@ import {
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [hideMobileMenu, setHideMobileMenu] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const { totalItems } = useCart();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const standaloneMq = window.matchMedia("(display-mode: standalone)");
+    const mobileMq = window.matchMedia("(max-width: 768px)");
+
+    const recompute = () => {
+      const shouldHide = standaloneMq.matches || mobileMq.matches;
+      setHideMobileMenu(shouldHide);
+      if (shouldHide) setIsMenuOpen(false);
+    };
+
+    recompute();
+
+    standaloneMq.addEventListener("change", recompute);
+    mobileMq.addEventListener("change", recompute);
+    window.addEventListener("resize", recompute);
+
+    return () => {
+      standaloneMq.removeEventListener("change", recompute);
+      mobileMq.removeEventListener("change", recompute);
+      window.removeEventListener("resize", recompute);
+    };
+  }, []);
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -31,7 +55,7 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+    <nav className="site-navbar sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
@@ -108,17 +132,19 @@ export function Navbar() {
             )}
 
             {/* Mobile Menu Toggle */}
-            <button
-              className="md:hidden p-2 hover:bg-secondary rounded-full transition-colors"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            {!hideMobileMenu && (
+              <button
+                className="md:hidden p-2 hover:bg-secondary rounded-full transition-colors"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            )}
           </div>
         </div>
 
         {/* Mobile Navigation */}
-        {isMenuOpen && (
+        {!hideMobileMenu && isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border animate-slide-up">
             <div className="flex flex-col gap-2">
               {navLinks.map((link) => (

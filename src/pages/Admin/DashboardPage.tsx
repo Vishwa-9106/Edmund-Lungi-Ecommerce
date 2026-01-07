@@ -117,6 +117,33 @@ function statusBadgeStyle(status: OrderStatus): React.CSSProperties {
 export default function DashboardPage() {
   const navigate = useNavigate();
 
+  const [useCompactLayout, setUseCompactLayout] = useState(false);
+
+  useEffect(() => {
+    const standaloneMq = window.matchMedia("(display-mode: standalone)");
+    const mobileMq = window.matchMedia("(max-width: 768px)");
+    const tabletMq = window.matchMedia("(max-width: 1023px)");
+
+    const recompute = () => {
+      const compact = mobileMq.matches || (standaloneMq.matches && tabletMq.matches);
+      setUseCompactLayout(compact);
+    };
+
+    recompute();
+
+    standaloneMq.addEventListener("change", recompute);
+    mobileMq.addEventListener("change", recompute);
+    tabletMq.addEventListener("change", recompute);
+    window.addEventListener("resize", recompute);
+
+    return () => {
+      standaloneMq.removeEventListener("change", recompute);
+      mobileMq.removeEventListener("change", recompute);
+      tabletMq.removeEventListener("change", recompute);
+      window.removeEventListener("resize", recompute);
+    };
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -393,8 +420,252 @@ export default function DashboardPage() {
 
   const empty = !loading && !error && todaysOrdersCount === 0 && recentOrders.length === 0;
 
+  if (useCompactLayout) {
+    return (
+      <div className="admin-dashboard p-4 sm:p-6">
+        <div className="mb-4 space-y-3">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Quick overview</p>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void fetchDashboard()}
+            disabled={loading}
+            className="w-full h-12"
+          >
+            Refresh
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="min-h-[240px] flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="rounded-md border border-border bg-background p-4">
+            <div className="text-sm font-medium">Failed to load dashboard</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+          </div>
+        ) : empty ? (
+          <div className="rounded-md border border-border bg-background p-6 text-center">
+            <div className="text-sm font-medium">No dashboard data yet</div>
+            <div className="text-sm text-muted-foreground">
+              Once orders and products are added, you’ll see a live overview here.
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <StatCard title="Today’s Orders" value={todaysOrdersCount} icon={ShoppingBag} className="min-h-[112px]" />
+              <StatCard title="Today’s Revenue" value={`₹${formatINR(todaysRevenue)}`} icon={TrendingUp} className="min-h-[112px]" />
+              <StatCard title="Pending Orders" value={pendingOrdersCount} icon={ShoppingBag} className="min-h-[112px]" />
+              <StatCard title="Low Stock Products" value={lowStockCount} icon={Package} className="min-h-[112px]" />
+            </div>
+
+            <ChartCard title="Recent Orders" subtitle="Latest 10">
+              <div className="mb-3">
+                <Button type="button" variant="outline" onClick={() => navigate("/admin/orders")} className="w-full h-12">
+                  Go to Orders Page
+                </Button>
+              </div>
+
+              {recentOrders.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No orders found.</div>
+              ) : (
+                <div className="space-y-3">
+                  {recentOrders.map((o) => {
+                    const status = normalizeStatus(o.status);
+                    return (
+                      <div key={o.id} className="rounded-md border border-border bg-background p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold truncate" title={o.order_number || o.id}>
+                              {o.order_number ? `Order #${o.order_number}` : `Order #${o.id}`}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">{formatDateTime(o.created_at)}</div>
+                          </div>
+                          <Badge className={statusBadgeClassName(status)} style={statusBadgeStyle(status)}>
+                            {status}
+                          </Badge>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <div className="text-sm font-semibold">₹{formatINR(normalizeTotal(o.total))}</div>
+                          <Button type="button" variant="outline" size="sm" className="h-12" onClick={() => navigate("/admin/orders")}>
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ChartCard>
+
+            <ChartCard title="Orders Requiring Attention" subtitle="Stale orders by status & age">
+              {attentionOrders.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No orders currently require attention.</div>
+              ) : (
+                <div className="space-y-3">
+                  {attentionOrders.map((o) => {
+                    const status = normalizeStatus(o.status);
+                    return (
+                      <div key={o.id} className="rounded-md border border-border bg-yellow-500/10 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold truncate" title={o.order_number || o.id}>
+                              {o.order_number ? `Order #${o.order_number}` : `Order #${o.id}`}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">{timeAgo(o.created_at)}</div>
+                          </div>
+                          <Badge className={statusBadgeClassName(status)} style={statusBadgeStyle(status)}>
+                            {status}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ChartCard>
+
+            <ChartCard title="Inventory Alerts" subtitle="Low stock and out of stock">
+              <div className="space-y-4">
+                <div>
+                  <div className="text-sm font-medium">Out of Stock</div>
+                  {outOfStockProducts.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">None</div>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {outOfStockProducts.map((p) => (
+                        <div key={p.id} className="rounded-md border border-border bg-background p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 text-sm font-medium truncate" title={p.name}>
+                              {p.name}
+                            </div>
+                            <div className="text-sm font-semibold text-destructive">0</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">Low Stock</div>
+                  {lowStockProducts.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">None</div>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {lowStockProducts.map((p) => {
+                        const critical = p.stock_quantity <= 5;
+                        return (
+                          <div key={p.id} className="rounded-md border border-border bg-background p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0 text-sm font-medium truncate" title={p.name}>
+                                {p.name}
+                              </div>
+                              <div className={critical ? "text-sm font-semibold text-destructive" : "text-sm font-semibold"}>
+                                {p.stock_quantity}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <Button type="button" variant="outline" onClick={() => navigate("/admin/products")} className="w-full h-12">
+                  Update Stock
+                </Button>
+              </div>
+            </ChartCard>
+
+            <ChartCard title="Customer Activity" subtitle="Recent registrations & orders">
+              {activityFeed.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No recent activity.</div>
+              ) : (
+                <div className="space-y-3">
+                  {activityFeed.map((a, idx) => (
+                    <div key={`${a.type}-${a.created_at}-${idx}`} className="rounded-md border border-border bg-background p-3">
+                      <div className="text-sm font-medium">
+                        {a.type === "user_registered"
+                          ? "New user registered"
+                          : a.type === "first_order"
+                            ? "First order placed"
+                            : "Repeat customer order"}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {timeAgo(a.created_at)} · {a.type === "user_registered" ? a.user_id : `${a.user_id} · ${a.order_number ?? "-"}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ChartCard>
+
+            <ChartCard title="Quick Admin Actions" subtitle="Navigation hub">
+              <div className="grid gap-2">
+                <Button type="button" onClick={() => navigate("/admin/products")} className="h-12 justify-start gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Product
+                </Button>
+                <Button type="button" variant="outline" onClick={() => navigate("/admin/orders")} className="h-12 justify-start gap-2">
+                  <ShoppingBag className="h-4 w-4" />
+                  View Orders
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/admin/sales-analytics")}
+                  className="h-12 justify-start gap-2"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Sales Analytics
+                </Button>
+                <Button type="button" variant="outline" onClick={() => navigate("/admin/marketing")} className="h-12 justify-start gap-2">
+                  <Megaphone className="h-4 w-4" />
+                  Marketing
+                </Button>
+                <Button type="button" variant="outline" onClick={() => navigate("/admin/messages")} className="h-12 justify-start gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Messages
+                </Button>
+              </div>
+            </ChartCard>
+
+            <ChartCard title="System Health & Store Status" subtitle="Quick status checks">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-muted-foreground">Store status</div>
+                  <Badge variant="secondary">Active</Badge>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-muted-foreground">Last order time</div>
+                  <div className="font-medium text-right">{formatDateTime(lastOrderTime)}</div>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-muted-foreground">Last product added</div>
+                  <div className="font-medium text-right">{formatDateTime(lastProductAddedTime)}</div>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-muted-foreground">Total active products</div>
+                  <div className="font-medium">{totalActiveProducts}</div>
+                </div>
+              </div>
+            </ChartCard>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
+    <div className="admin-dashboard p-6">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>

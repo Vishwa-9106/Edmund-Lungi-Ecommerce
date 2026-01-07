@@ -978,13 +978,13 @@ export default function CustomerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="card-elevated p-6">
+                    <div className="order-tracking-select-card card-elevated p-6">
                       <label htmlFor="tracking-order" className="block text-sm font-medium text-foreground mb-2">
                         Select Order
                       </label>
                       <select
                         id="tracking-order"
-                        className="input-field w-full"
+                        className="order-tracking-select input-field w-full"
                         value={selectedTrackingOrderId ?? ""}
                         onChange={(e) => setSelectedTrackingOrderId(e.target.value || null)}
                       >
@@ -999,8 +999,8 @@ export default function CustomerDashboard() {
                     {trackingOrder && (
                       <div className="card-elevated p-6">
                         <div className="flex items-start justify-between gap-6 flex-wrap">
-                          <div>
-                            <h2 className="font-semibold text-xl">
+                          <div className="min-w-0">
+                            <h2 className="order-tracking-title font-semibold text-xl">
                               {trackingOrder.order_number
                                 ? `Order ${trackingOrder.order_number}`
                                 : `Order ${trackingOrder.id}`}

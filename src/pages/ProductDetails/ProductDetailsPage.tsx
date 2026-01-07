@@ -253,10 +253,10 @@ export default function ProductDetailsPage() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 pt-6">
+            <div className="product-action-buttons flex flex-col sm:flex-row gap-4 pt-6">
               <Button
                 size="lg"
-                className="btn-primary flex-1 gap-2"
+                className="product-action-button btn-primary flex-1 gap-2"
                  onClick={handleAddToCart}
                 >
                   <ShoppingBag className="w-5 h-5" />
@@ -265,7 +265,7 @@ export default function ProductDetailsPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="btn-outline flex-1 gap-2"
+                  className="product-action-button btn-outline flex-1 gap-2"
                   onClick={() => setShowTryOn(true)}
                 >
                   <Sparkles className="w-5 h-5" />
