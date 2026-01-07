@@ -51,7 +51,7 @@ export default function AdminPage() {
 
   const navigate = useNavigate();
     const location = useLocation();
-    const isMobileOptimizedRoute = location.pathname === "/admin/dashboard" || location.pathname === "/admin/orders";
+    const isMobileOptimizedRoute = location.pathname === "/admin/dashboard" || location.pathname === "/admin/orders" || location.pathname === "/admin/sales-analytics";
     const [logoutBusy, setLogoutBusy] = useState(false);
 
   const handleConfirmLogout = async () => {

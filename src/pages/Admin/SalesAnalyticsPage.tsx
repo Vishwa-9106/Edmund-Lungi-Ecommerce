@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/supabase";
 import { Button } from "@/components/ui/button";
 import { ChartCard } from "@/components/ChartCard";
@@ -30,7 +31,23 @@ import {
   ShoppingBag,
   TrendingUp,
   Users,
+  LayoutDashboard,
+  LogOut,
+  RefreshCw,
+  BarChart3,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type OrderRow = {
   id: string;
@@ -144,6 +161,29 @@ function downloadTextFile(filename: string, content: string, mime = "text/plain;
 }
 
 export default function SalesAnalyticsPage() {
+  const navigate = useNavigate();
+  const [useCompactLayout, setUseCompactLayout] = useState(false);
+
+  useEffect(() => {
+    const standaloneMq = window.matchMedia("(display-mode: standalone)");
+    const mobileMq = window.matchMedia("(max-width: 768px)");
+
+    const recompute = () => {
+      setUseCompactLayout(mobileMq.matches || standaloneMq.matches);
+    };
+
+    recompute();
+    standaloneMq.addEventListener("change", recompute);
+    mobileMq.addEventListener("change", recompute);
+    window.addEventListener("resize", recompute);
+
+    return () => {
+      standaloneMq.removeEventListener("change", recompute);
+      mobileMq.removeEventListener("change", recompute);
+      window.removeEventListener("resize", recompute);
+    };
+  }, []);
+
   const [preset, setPreset] = useState<PeriodPreset>("7d");
   const [metric, setMetric] = useState<TrendMetric>("revenue");
 
@@ -153,6 +193,7 @@ export default function SalesAnalyticsPage() {
   const [deliveredOrders, setDeliveredOrders] = useState<OrderRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [prevDeliveredTotals, setPrevDeliveredTotals] = useState<number[]>([]);
+  const [logoutBusy, setLogoutBusy] = useState(false);
 
   const { rangeStart, rangeEnd, prevStart, prevEnd } = useMemo(() => {
     const today = startOfDay(new Date());
@@ -191,7 +232,6 @@ export default function SalesAnalyticsPage() {
       setOrders(allOrders);
       setDeliveredOrders(delivered);
 
-      // Previous period delivered totals (for growth %)
       const { data: prevDelivered, error: prevErr } = await supabase
         .from("orders")
         .select("total")
@@ -202,7 +242,6 @@ export default function SalesAnalyticsPage() {
       const totals = (Array.isArray(prevDelivered) ? (prevDelivered as any[]) : []).map((r) => normalizeTotal(r?.total ?? 0));
       setPrevDeliveredTotals(totals);
 
-      // Products join for category/material analytics and product performance.
       const productIds = Array.from(
         new Set(
           delivered
@@ -465,7 +504,294 @@ export default function SalesAnalyticsPage() {
     []
   );
 
+  const handleLogout = async () => {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    try {
+      await supabase.auth.signOut();
+      navigate("/", { replace: true });
+    } finally {
+      setLogoutBusy(false);
+    }
+  };
+
   const empty = !loading && !error && orders.length === 0;
+
+  if (useCompactLayout) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background text-foreground overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+80px)]">
+        {/* Minimal Header */}
+        <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 h-16 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Sales Analytics</h1>
+            <p className="text-[10px] text-muted-foreground uppercase font-medium">Live Insights</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => void fetchData()}
+            disabled={loading}
+            className="rounded-full hover:bg-accent"
+          >
+            <RefreshCw className={cn("h-5 w-5", loading && "animate-spin")} />
+          </Button>
+        </header>
+
+        {/* Sticky Filters */}
+        <div className="sticky top-16 z-30 w-full bg-background/95 backdrop-blur border-b border-border px-4 py-3 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 min-w-max">
+            <Button
+              type="button"
+              variant={preset === "today" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPreset("today")}
+              className="rounded-full h-10 px-6 text-xs font-bold uppercase"
+            >
+              Today
+            </Button>
+            <Button
+              type="button"
+              variant={preset === "7d" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPreset("7d")}
+              className="rounded-full h-10 px-6 text-xs font-bold uppercase"
+            >
+              Last 7 days
+            </Button>
+            <Button
+              type="button"
+              variant={preset === "30d" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPreset("30d")}
+              className="rounded-full h-10 px-6 text-xs font-bold uppercase"
+            >
+              Last 30 days
+            </Button>
+          </div>
+        </div>
+
+        <main className="flex-1 p-4 space-y-4 max-w-md mx-auto w-full">
+          {loading ? (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground animate-pulse">Fetching analytics...</p>
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-center space-y-3">
+              <div className="text-sm font-semibold text-destructive">Failed to load analytics</div>
+              <p className="text-xs text-muted-foreground">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => void fetchData()}>Retry</Button>
+            </div>
+          ) : empty ? (
+            <div className="rounded-2xl border border-border bg-background p-10 text-center space-y-4">
+              <div className="mx-auto w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-semibold">No Data for this Period</div>
+                <p className="text-xs text-muted-foreground">Sales activity will appear here once orders are placed.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* KPI Cards Stacked */}
+              <div className="space-y-3">
+                <StatCard
+                  title="Total Revenue"
+                  value={`₹${formatINR(deliveredRevenue)}`}
+                  change={Math.round(revenueGrowthPct * 10) / 10}
+                  icon={DollarSign}
+                  className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm"
+                />
+                <StatCard 
+                  title="Total Orders" 
+                  value={totalOrdersCount} 
+                  icon={ShoppingBag} 
+                  className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm"
+                />
+                <StatCard 
+                  title="Average Order Value" 
+                  value={`₹${formatINR(avgOrderValue)}`} 
+                  icon={TrendingUp} 
+                  className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm"
+                />
+                <StatCard 
+                  title="Total Items Sold" 
+                  value={totalItemsSold} 
+                  icon={Package} 
+                  className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm"
+                />
+                <StatCard 
+                  title="Delivered %" 
+                  value={`${formatINR(deliveredPct)}%`} 
+                  icon={Percent} 
+                  className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm"
+                />
+              </div>
+
+              {/* Export Button */}
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full h-14 rounded-2xl border-2 font-bold uppercase text-xs"
+                onClick={handleExportCsv} 
+                disabled={orders.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV Report
+              </Button>
+
+              {/* Charts (Responsive) */}
+              <div className="space-y-6">
+                <ChartCard title="Sales Trend" subtitle="Revenue (Delivered) vs Orders.">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={metric === "revenue" ? "default" : "outline"}
+                      onClick={() => setMetric("revenue")}
+                      className="rounded-full h-8 px-4 text-[10px] font-bold uppercase"
+                    >
+                      Revenue
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={metric === "orders" ? "default" : "outline"}
+                      onClick={() => setMetric("orders")}
+                      className="rounded-full h-8 px-4 text-[10px] font-bold uppercase"
+                    >
+                      Orders
+                    </Button>
+                  </div>
+
+                  <ChartContainer config={trendConfig} className="h-[200px]">
+                    <AreaChart data={trendData} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis dataKey="date" hide />
+                      <YAxis hide />
+                      <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                      {metric === "revenue" ? (
+                        <Area
+                          dataKey="revenue"
+                          type="monotone"
+                          stroke="var(--color-revenue)"
+                          fill="var(--color-revenue)"
+                          fillOpacity={0.1}
+                          strokeWidth={2}
+                        />
+                      ) : (
+                        <Area
+                          dataKey="orders"
+                          type="monotone"
+                          stroke="var(--color-orders)"
+                          fill="var(--color-orders)"
+                          fillOpacity={0.1}
+                          strokeWidth={2}
+                        />
+                      )}
+                    </AreaChart>
+                  </ChartContainer>
+                </ChartCard>
+
+                <ChartCard title="Order Status" subtitle={`Delivered: ${formatINR(deliveredPct)}%`}>
+                  <ChartContainer config={statusConfig} className="h-[240px]">
+                    <PieChart>
+                      <ChartTooltip content={<ChartTooltipContent nameKey="status" />} />
+                      <Pie
+                        data={statusBreakdown}
+                        dataKey="count"
+                        nameKey="status"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                      >
+                        {statusBreakdown.map((entry) => (
+                          <Cell key={entry.status} fill={(entry as any).fill} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ChartContainer>
+                </ChartCard>
+
+                <div className="space-y-4">
+                  <StatCard title="New Customers" value={newCustomers} icon={Users} className="rounded-2xl border border-border bg-card p-5 shadow-sm" />
+                  <StatCard title="Returning Customers" value={returningCustomers} icon={Users} className="rounded-2xl border border-border bg-card p-5 shadow-sm" />
+                  <StatCard title="Avg Orders / User" value={formatINR(avgOrdersPerUserInRange)} icon={Users} className="rounded-2xl border border-border bg-card p-5 shadow-sm" />
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Mobile Admin Bottom Nav */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+          <div className="max-w-md mx-auto rounded-2xl border border-border bg-background/90 backdrop-blur-xl shadow-2xl p-1 grid grid-cols-5">
+            <NavLink 
+              to="/admin/dashboard" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <LayoutDashboard className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Home</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/orders" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Orders</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/products" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <Package className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Lungi</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/sales-analytics" 
+              className={({ isActive }) => cn(
+                "flex flex-col items-center justify-center py-2 rounded-xl transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span className="text-[8px] font-bold uppercase mt-1">Sales</span>
+            </NavLink>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="flex flex-col items-center justify-center py-2 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-[8px] font-bold uppercase mt-1">Exit</span>
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="w-[90%] max-w-sm rounded-3xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Admin Logout</AlertDialogTitle>
+                  <AlertDialogDescription>Are you sure you want to sign out of the admin panel?</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col gap-2 mt-4">
+                  <AlertDialogAction onClick={handleLogout} disabled={logoutBusy} className="w-full h-12 rounded-xl">Logout</AlertDialogAction>
+                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none">Cancel</AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </nav>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
