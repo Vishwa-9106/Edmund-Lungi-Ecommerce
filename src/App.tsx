@@ -54,8 +54,13 @@ const AdminRedirector = () => {
     if (loading) return;
     if (!isAuthenticated) return;
     if (role !== "admin") return;
+    if (location.pathname === "/admin") {
+      navigate("/admin/dashboard", { replace: true });
+      return;
+    }
+
     if (location.pathname.startsWith("/admin")) return;
-    navigate("/admin", { replace: true });
+    navigate("/admin/dashboard", { replace: true });
   }, [loading, isAuthenticated, role, location.pathname, navigate]);
 
   return null;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { AdminBottomNav } from "@/components/AdminBottomNav";
 import {
@@ -51,9 +51,9 @@ export default function AdminPage() {
   );
 
   const navigate = useNavigate();
-    const location = useLocation();
-    const isMobileOptimizedRoute = location.pathname.startsWith("/admin/");
-    const [logoutBusy, setLogoutBusy] = useState(false);
+  const location = useLocation();
+  const isMobileOptimizedRoute = location.pathname === "/admin" || location.pathname.startsWith("/admin/");
+  const [logoutBusy, setLogoutBusy] = useState(false);
 
   const handleConfirmLogout = async () => {
     if (logoutBusy) return;
@@ -67,28 +67,62 @@ export default function AdminPage() {
   };
 
   const [collapsed, setCollapsed] = useState(false);
+  const [shouldHideSidebar, setShouldHideSidebar] = useState(() => {
+    if (!isMobileOptimizedRoute) return false;
+    if (typeof window === "undefined") return false;
+
+    const isMobileWidth = window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+    const isStandaloneDisplayMode = window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+    const isIOSStandalone = (window.navigator as any)?.standalone === true;
+
+    return isMobileWidth || isStandaloneDisplayMode || isIOSStandalone;
+  });
+
+  useEffect(() => {
+    if (!isMobileOptimizedRoute) return;
+    if (typeof window === "undefined") return;
+
+    const mobileMq = window.matchMedia("(max-width: 768px)");
+    const standaloneMq = window.matchMedia("(display-mode: standalone)");
+
+    const update = () => {
+      const isIOSStandalone = (window.navigator as any)?.standalone === true;
+      setShouldHideSidebar(mobileMq.matches || standaloneMq.matches || isIOSStandalone);
+    };
+
+    update();
+
+    mobileMq.addEventListener?.("change", update);
+    standaloneMq.addEventListener?.("change", update);
+    return () => {
+      mobileMq.removeEventListener?.("change", update);
+      standaloneMq.removeEventListener?.("change", update);
+    };
+  }, [isMobileOptimizedRoute]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <div className="flex min-h-screen">
         <aside
             className={cn(
               "shrink-0 border-r border-border bg-background transition-[width] duration-200",
               collapsed ? "w-16" : "w-64",
-              isMobileOptimizedRoute && "hidden md:block"
+              shouldHideSidebar && "hidden"
             )}
         >
           <div className="h-16 flex items-center justify-between px-3">
             <div className={cn("min-w-0", collapsed && "sr-only")}> </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setCollapsed((v) => !v)}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? <ChevronRight /> : <ChevronLeft />}
-            </Button>
+            {!shouldHideSidebar && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setCollapsed((v) => !v)}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {collapsed ? <ChevronRight /> : <ChevronLeft />}
+              </Button>
+            )}
           </div>
 
           <nav className="px-2 pb-4">
@@ -118,12 +152,17 @@ export default function AdminPage() {
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-x-hidden">
+        <main
+          className={cn(
+            "flex-1 overflow-x-hidden min-w-0",
+            shouldHideSidebar && "w-full pb-[calc(76px+env(safe-area-inset-bottom))]"
+          )}
+        >
           <Outlet />
         </main>
       </div>
 
-      <div className={cn("fixed bottom-4 left-4 z-50", isMobileOptimizedRoute && "hidden md:block")}>
+      <div className={cn("fixed bottom-4 left-4 z-50", shouldHideSidebar && "hidden")}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button type="button" variant="outline" size="sm" disabled={logoutBusy}>
@@ -144,7 +183,7 @@ export default function AdminPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      <AdminBottomNav />
+      <AdminBottomNav forceVisible={shouldHideSidebar} />
     </div>
   );
 }

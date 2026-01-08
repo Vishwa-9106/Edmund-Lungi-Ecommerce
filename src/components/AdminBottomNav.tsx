@@ -24,7 +24,7 @@ import {
 import { supabase } from "@/supabase";
 import { useState } from "react";
 
-export function AdminBottomNav() {
+export function AdminBottomNav({ forceVisible = false }: { forceVisible?: boolean }) {
   const navigate = useNavigate();
   const [logoutBusy, setLogoutBusy] = useState(false);
 
@@ -49,7 +49,12 @@ export function AdminBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 bg-gradient-to-t from-background via-background/95 to-transparent md:hidden">
+    <nav
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 px-2 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 bg-gradient-to-t from-background via-background/95 to-transparent",
+        !forceVisible && "md:hidden"
+      )}
+    >
       <div className="max-w-md mx-auto rounded-2xl border border-border bg-background/90 backdrop-blur-xl shadow-2xl p-1 flex justify-between items-center overflow-x-auto no-scrollbar">
         {navItems.map((item) => (
           <NavLink

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,22 +13,9 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const { login, googleSignIn, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, googleSignIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const redirectTo = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const raw = params.get("redirect");
-    return raw && raw.startsWith("/") ? raw : "/home";
-  }, [location.search]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) return;
-    navigate(redirectTo, { replace: true });
-  }, [authLoading, isAuthenticated, navigate, redirectTo]);
 
   const validate = () => {
     const next: typeof errors = {};
@@ -47,7 +34,7 @@ export default function LoginPage() {
 
     if (result.ok) {
       toast({ title: "Welcome back!", description: "You have been logged in successfully." });
-      // Navigation is handled by auth state sync + redirect query param.
+      navigate(result.role === "admin" ? "/admin/dashboard" : "/", { replace: true });
     } else {
       const message = "error" in result ? result.error : "Please check your credentials and try again.";
       toast({ title: "Login failed", description: message, variant: "destructive" });

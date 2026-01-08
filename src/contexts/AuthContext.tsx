@@ -16,7 +16,7 @@ interface AuthContextType {
   role: Role | null;
   authLoading: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  login: (email: string, password: string) => Promise<{ ok: true; role: Role } | { ok: false; error: string }>;
   signup: (
     name: string,
     email: string,
@@ -172,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: (u as any)?.created_at || undefined,
       });
       setRole(resolvedRole);
-      return { ok: true as const };
+      return { ok: true as const, role: resolvedRole };
     } catch (e: any) {
       const msg = e?.message || "Login failed";
       return { ok: false as const, error: msg };
