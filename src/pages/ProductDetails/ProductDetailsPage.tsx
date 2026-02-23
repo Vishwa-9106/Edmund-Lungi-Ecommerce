@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, Minus, Plus, ShoppingBag, Sparkles } from "lucide-react";
+import { ArrowLeft, Star, Minus, Plus, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/data/products";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/supabase";
 import { WishlistHeart } from "@/components/WishlistHeart";
-import { AiTryOnModal } from "@/components/AiTryOnModal";
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
@@ -15,7 +14,6 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [isTryOnModalOpen, setIsTryOnModalOpen] = useState(false);
   const { addToCart } = useCart();
   const { toast } = useToast();
 
@@ -259,24 +257,9 @@ export default function ProductDetailsPage() {
                 <ShoppingBag className="w-5 h-5" />
                 Add to Cart
               </Button>
-              <button
-                type="button"
-                className="product-action-button mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-200 hover:from-purple-700 hover:to-pink-700 hover:shadow-xl"
-                onClick={() => setIsTryOnModalOpen(true)}
-              >
-                <Sparkles className="w-5 h-5" />
-                Try with AI
-              </button>
             </div>
           </div>
         </div>
-        <AiTryOnModal
-          isOpen={isTryOnModalOpen}
-          onClose={() => setIsTryOnModalOpen(false)}
-          productId={product.id}
-          productImage={product.images[0]}
-          productName={product.name}
-        />
       </div>
     </div>
   );
