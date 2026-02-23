@@ -1,289 +1,352 @@
-"use client";
-
-import { useState, useRef, useCallback } from "react";
-import { X, Upload, Sparkles, AlertCircle, RefreshCw, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { validateBodyImage, fileToBase64, urlToBase64 } from "@/lib/imageValidation";
-import type { ValidationResult } from "@/lib/imageValidation";
+import { useEffect, useState, type ChangeEvent, type MouseEvent } from "react";
+import { X, Upload, Loader2, Download, Sparkles } from "lucide-react";
+import { useTryOn, useTryOnQuota } from "@/hooks/useTryOn";
 import { supabase } from "@/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 interface AiTryOnModalProps {
   isOpen: boolean;
   onClose: () => void;
-  productImages: string[];
+  productId: string;
+  productImage: string;
   productName: string;
 }
 
-export function AiTryOnModal({ isOpen, onClose, productImages, productName }: AiTryOnModalProps) {
-  const [userImage, setUserImage] = useState<File | null>(null);
-  const [userImagePreview, setUserImagePreview] = useState<string | null>(null);
-  const [selectedPattern, setSelectedPattern] = useState<string>(productImages[0] || "");
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [bodyType, setBodyType] = useState<"full" | "half" | null>(null);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Failed to generate preview. Please try again.";
+}
 
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+export function AiTryOnModal({
+  isOpen,
+  onClose,
+  productId,
+  productImage,
+  productName,
+}: AiTryOnModalProps) {
+  const [personImage, setPersonImage] = useState<File | null>(null);
+  const [personImagePreview, setPersonImagePreview] = useState<string | null>(null);
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const tryOnMutation = useTryOn();
+  const { data: quota } = useTryOnQuota();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !tryOnMutation.isPending) {
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [isOpen, tryOnMutation.isPending]);
+
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setValidationError("Please select an image file (JPG, PNG).");
+    if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
+      setUploadError("Only JPG and PNG images are supported");
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setValidationError("Image size must be less than 5MB.");
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setUploadError("Image must be smaller than 5MB");
       return;
     }
 
-    setValidationError(null);
-    setApiError(null);
-    setGeneratedImage(null);
+    setUploadError(null);
+    setPersonImage(file);
 
-    const result: ValidationResult = await validateBodyImage(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPersonImagePreview((event.target?.result as string) ?? null);
+    };
+    reader.readAsDataURL(file);
+  };
 
-    if (!result.valid) {
-      setValidationError(result.error || "Invalid image");
-      setUserImage(null);
-      setUserImagePreview(null);
-      setBodyType(null);
+  const handleGeneratePreview = async () => {
+    if (isGenerating || tryOnMutation.isPending) return;
+
+    if (!personImage) {
+      setUploadError("Please upload your photo first");
       return;
     }
 
-    setBodyType(result.bodyType || null);
-    setUserImage(file);
-    setUserImagePreview(URL.createObjectURL(file));
-  }, []);
-
-  const handleGenerate = useCallback(async () => {
-    if (!userImage || !selectedPattern) return;
-
-    setIsLoading(true);
-    setApiError(null);
-    setGeneratedImage(null);
+    setUploadError(null);
+    setIsGenerating(true);
+    let uploadedPath: string | null = null;
 
     try {
-      const userImageBase64 = await fileToBase64(userImage);
-      
-      let patternBase64: string;
-      if (selectedPattern.startsWith("data:")) {
-        patternBase64 = selectedPattern.split(",")[1];
-      } else {
-        patternBase64 = await urlToBase64(selectedPattern);
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Please log in to use this feature");
       }
 
-      const { data, error } = await supabase.functions.invoke("ai-tryon", {
-        body: {
-          userImage: userImageBase64,
-          dhotiImage: patternBase64,
-          bodyType: bodyType,
-        },
+      const safeName = personImage.name.replace(/\s+/g, "_");
+      const fileName = `${user.id}/${Date.now()}_${safeName}`;
+      uploadedPath = fileName;
+
+      const { error: storageUploadError } = await supabase.storage
+        .from("tryon-person-images")
+        .upload(fileName, personImage, {
+          contentType: personImage.type || "image/jpeg",
+          upsert: false,
+        });
+
+      if (storageUploadError) {
+        throw new Error(`Upload failed: ${storageUploadError.message}`);
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("tryon-person-images").getPublicUrl(fileName);
+
+      if (!publicUrl) {
+        throw new Error("Could not get image URL after upload");
+      }
+
+      const result = await tryOnMutation.mutateAsync({
+        personImageUrl: publicUrl,
+        productId,
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to generate preview");
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      if (data?.image) {
-        if (data.image.startsWith("http")) {
-          setGeneratedImage(data.image);
-        } else {
-          setGeneratedImage(`data:image/png;base64,${data.image}`);
-        }
-      } else {
-        throw new Error("No image returned from AI");
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to generate preview";
-      setApiError(message);
+      setResultImage(result.result_url);
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      console.error("Try-on error:", error);
+      setUploadError(message);
+      toast({
+        title: "AI preview failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false);
+      if (uploadedPath) {
+        const { error: cleanupError } = await supabase.storage
+          .from("tryon-person-images")
+          .remove([uploadedPath]);
+        if (cleanupError) {
+          console.warn("Try-on upload cleanup failed:", cleanupError.message);
+        }
+      }
+      setIsGenerating(false);
     }
-  }, [userImage, selectedPattern, bodyType]);
+  };
 
-  const handleRetry = useCallback(() => {
-    setApiError(null);
-    handleGenerate();
-  }, [handleGenerate]);
+  const handleDownload = async () => {
+    if (!resultImage) return;
 
-  const resetModal = useCallback(() => {
-    setUserImage(null);
-    setUserImagePreview(null);
-    setGeneratedImage(null);
-    setValidationError(null);
-    setApiError(null);
-    setBodyType(null);
-    setSelectedPattern(productImages[0] || "");
-  }, [productImages]);
+    try {
+      const response = await fetch(resultImage);
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/")) {
+        throw new Error("Generated file is not a valid image");
+      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${productName.replace(/\s+/g, "_")}_tryon.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+      setUploadError("Failed to download image. Please try again.");
+    }
+  };
 
-  const handleClose = useCallback(() => {
-    resetModal();
+  const handleReset = () => {
+    setPersonImage(null);
+    setPersonImagePreview(null);
+    setResultImage(null);
+    setUploadError(null);
+  };
+
+  const handleClose = () => {
+    if (tryOnMutation.isPending || isGenerating) return;
+    handleReset();
     onClose();
-  }, [onClose, resetModal]);
+  };
+
+  const handleBackdropClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
 
   if (!isOpen) return null;
 
-  const canGenerate = userImage && selectedPattern && !isLoading && !validationError;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/50 backdrop-blur-sm">
-      <div className="bg-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 animate-scale-in">
-        <div className="flex items-center justify-between mb-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={handleBackdropClick}
+      role="presentation"
+    >
+      <div
+        className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4">
           <div>
-            <h2 className="font-display text-xl font-semibold">AI Try-On</h2>
-            <p className="text-sm text-muted-foreground mt-1">{productName}</p>
+            <h2 className="text-2xl font-bold text-gray-900">Try with AI</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Upload your photo and confirm the product details to generate a preview.
+            </p>
+            {quota ? (
+              <p className="mt-1 text-xs text-gray-500">
+                Remaining: <span className="font-semibold">{quota.daily_remaining}</span> today,{" "}
+                <span className="ml-1 font-semibold">{quota.monthly_remaining}</span> this month
+              </p>
+            ) : null}
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-secondary rounded-lg transition-colors"
+            className="rounded-full p-2 transition-colors hover:bg-gray-100"
+            aria-label="Close modal"
+            disabled={tryOnMutation.isPending || isGenerating}
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="space-y-6">
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            
-            {!userImagePreview ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              >
-                <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="font-medium mb-2">Upload Your Photo</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Half-body or full-body photo, JPG/PNG up to 5MB
-                </p>
-                <Button variant="outline" size="sm" type="button">
-                  Choose File
-                </Button>
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="aspect-[3/4] max-h-64 mx-auto rounded-xl overflow-hidden bg-secondary">
-                  <img
-                    src={userImagePreview}
-                    alt="Your photo"
-                    className="w-full h-full object-contain"
-                  />
+        <div className="p-6">
+          {!resultImage ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="mb-3 text-lg font-semibold">1. Upload Person Photo</h3>
+                <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-gray-400">
+                  {personImagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={personImagePreview}
+                        alt="Preview"
+                        className="h-64 w-full rounded object-contain"
+                      />
+                      <button
+                        onClick={() => {
+                          setPersonImage(null);
+                          setPersonImagePreview(null);
+                          setUploadError(null);
+                        }}
+                        className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white transition-colors hover:bg-red-600"
+                        aria-label="Remove image"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                      <label className="cursor-pointer">
+                        <span className="font-medium text-blue-600 hover:text-blue-700">
+                          Choose File
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/jpg"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="mt-2 text-sm text-gray-500">
+                        JPG/PNG only, maximum file size 5MB
+                      </p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        Your uploaded image will appear here
+                      </p>
+                    </>
+                  )}
                 </div>
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <Check className="w-4 h-4" />
-                    <span>{bodyType === "full" ? "Full-body" : "Half-body"} photo detected</span>
+                {uploadError ? (
+                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                    <p className="text-sm text-red-600">{uploadError}</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setUserImage(null);
-                      setUserImagePreview(null);
-                      setBodyType(null);
-                      setGeneratedImage(null);
-                    }}
-                  >
-                    Change Photo
-                  </Button>
+                ) : null}
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-lg font-semibold">2. Garment Reference</h3>
+                <div className="rounded-lg border bg-gray-50 p-4">
+                  <img
+                    src={productImage}
+                    alt={productName}
+                    className="mb-3 h-64 w-full rounded object-contain"
+                  />
+                  <p className="mb-2 text-sm font-medium text-gray-900">{productName}</p>
+                  <p className="text-xs text-gray-600">
+                    The model preserves face/background and focuses on lower-body drape styling.
+                  </p>
                 </div>
               </div>
-            )}
-
-            {validationError && (
-              <div className="flex items-start gap-2 mt-3 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{validationError}</span>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <p className="font-medium mb-3">Select Dhoti Pattern</p>
-            <div className="grid grid-cols-4 gap-3">
-              {productImages.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedPattern(img)}
-                  className={`aspect-square rounded-lg overflow-hidden transition-all ${
-                    selectedPattern === img
-                      ? "ring-2 ring-primary ring-offset-2"
-                      : "hover:ring-2 ring-muted-foreground/30"
-                  }`}
-                >
-                  <img
-                    src={img}
-                    alt={`Pattern ${i + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
             </div>
-          </div>
-
-          {(generatedImage || isLoading || apiError) && (
-            <div className="bg-secondary rounded-xl p-4">
-              <p className="font-medium mb-3 text-center">AI Preview</p>
-              {isLoading ? (
-                <div className="aspect-[3/4] max-h-80 mx-auto flex flex-col items-center justify-center">
-                  <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-                  <p className="text-muted-foreground">Generating AI preview…</p>
-                </div>
-              ) : apiError ? (
-                <div className="aspect-[3/4] max-h-80 mx-auto flex flex-col items-center justify-center text-center p-4">
-                  <AlertCircle className="w-10 h-10 text-destructive mb-4" />
-                  <p className="text-destructive mb-4">{apiError}</p>
-                  <Button onClick={handleRetry} variant="outline" className="gap-2">
-                    <RefreshCw className="w-4 h-4" />
-                    Retry
-                  </Button>
-                </div>
-              ) : generatedImage ? (
-                <div className="aspect-[3/4] max-h-80 mx-auto rounded-lg overflow-hidden">
-                  <img
-                    src={generatedImage}
-                    alt="AI Try-On Preview"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : null}
+          ) : (
+            <div className="text-center">
+              <h3 className="mb-6 text-xl font-semibold text-gray-900">Your AI Try-On Result</h3>
+              <div className="mx-auto mb-6 max-w-md">
+                <img
+                  src={resultImage}
+                  alt="Try-on result"
+                  className="w-full rounded-lg shadow-lg"
+                  onError={() => setUploadError("Could not load generated image URL. Please try again.")}
+                />
+              </div>
+              <div className="flex flex-wrap justify-center gap-3">
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-white shadow-md transition-colors hover:bg-green-700 hover:shadow-lg"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Result
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="rounded-lg bg-gray-200 px-6 py-3 text-gray-700 transition-colors hover:bg-gray-300"
+                >
+                  Try Again
+                </button>
+              </div>
             </div>
           )}
-
-          <Button
-            className="w-full btn-primary gap-2"
-            onClick={handleGenerate}
-            disabled={!canGenerate}
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Generating…
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                Generate AI Preview
-              </>
-            )}
-          </Button>
-
-          <p className="text-xs text-muted-foreground text-center">
-            AI-assisted preview. Actual fit may vary.
-          </p>
         </div>
+
+        {!resultImage ? (
+          <div className="sticky bottom-0 z-10 border-t bg-white px-6 py-4">
+            <button
+              type="button"
+              onClick={handleGeneratePreview}
+              disabled={!personImage || tryOnMutation.isPending || isGenerating}
+              className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-200 hover:from-purple-700 hover:to-pink-700 hover:shadow-xl disabled:cursor-not-allowed disabled:from-gray-300 disabled:to-gray-300 disabled:shadow-none"
+            >
+              {tryOnMutation.isPending || isGenerating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  {tryOnMutation.isPending
+                    ? "Generating Preview... (this may take 30-60 seconds)"
+                    : "Preparing Preview..."}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Generate AI Preview
+                </span>
+              )}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

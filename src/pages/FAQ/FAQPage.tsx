@@ -30,10 +30,6 @@ const FAQPage = () => {
       answer: "For cotton lungis, machine wash in cold water with mild detergent and tumble dry on low. Silk lungis should be dry cleaned or hand washed gently. Avoid bleach and direct sunlight when drying. Iron on medium heat while slightly damp for best results."
     },
     {
-      question: "What is the AI Try-On feature?",
-      answer: "Our AI Try-On feature (coming soon) allows you to upload your photo and virtually try on different lungi patterns before purchasing. This helps you visualize how different designs will look on you, making it easier to choose the perfect lungi."
-    },
-    {
       question: "Do you offer bulk or wholesale orders?",
       answer: "Yes! We offer special pricing for bulk orders of 50+ units. This is perfect for events, corporate gifts, or retail partnerships. Contact our business team at wholesale@edmundlungi.com for custom quotes and exclusive designs."
     },

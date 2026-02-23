@@ -199,7 +199,6 @@
 
 @layer utilities {
   .mobile-bottom-nav {
-    display: none;
     position: fixed;
     left: 0;
     right: 0;
@@ -208,49 +207,19 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  @media (max-width: 768px) {
-    .mobile-bottom-nav {
-      display: block;
-    }
-
-    main {
-      padding-bottom: calc(76px + env(safe-area-inset-bottom));
-    }
-
-    .site-navbar button.md\\:hidden {
-      display: none;
-    }
-
-    .site-navbar div.md\\:hidden.py-4 {
-      display: none;
-    }
-  }
-
-  @media (display-mode: standalone) and (max-width: 1023px) {
-    .mobile-bottom-nav {
-      display: block;
-    }
-
-    main {
-      padding-bottom: calc(76px + env(safe-area-inset-bottom));
-    }
+  .has-mobile-bottom-nav main {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
   }
 }
 
 @layer utilities {
-  @media (max-width: 768px) {
-    .site-footer .container {
-      padding-bottom: calc(76px + env(safe-area-inset-bottom));
-    }
-
-    .site-footer .grid {
-      gap: 20px;
-    }
+  .has-mobile-bottom-nav .site-footer .container {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
   }
 
-  @media (display-mode: standalone) and (max-width: 1023px) {
-    .site-footer .container {
-      padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  @media (max-width: 768px) {
+    .site-footer .grid {
+      gap: 20px;
     }
   }
 }

@@ -15,7 +15,7 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [showTryOn, setShowTryOn] = useState(false);
+  const [isTryOnModalOpen, setIsTryOnModalOpen] = useState(false);
   const { addToCart } = useCart();
   const { toast } = useToast();
 
@@ -123,7 +123,6 @@ export default function ProductDetailsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        {/* Breadcrumb */}
         <Link
           to="/shop"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -133,7 +132,6 @@ export default function ProductDetailsPage() {
         </Link>
 
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Product Images */}
           <div className="space-y-4">
             <div className="aspect-square rounded-2xl bg-secondary overflow-hidden relative">
               <img
@@ -161,7 +159,6 @@ export default function ProductDetailsPage() {
             </div>
           </div>
 
-          {/* Product Info */}
           <div className="space-y-6">
             <div>
               <p className="text-sm text-primary font-medium uppercase tracking-wide">
@@ -184,11 +181,11 @@ export default function ProductDetailsPage() {
 
             <div className="flex items-baseline gap-3">
               <span className="text-3xl font-bold text-primary">
-                ₹{product.price.toLocaleString()}
+                &#8377;{product.price.toLocaleString()}
               </span>
               {product.originalPrice && (
                 <span className="text-xl text-muted-foreground line-through">
-                  ₹{product.originalPrice.toLocaleString()}
+                  &#8377;{product.originalPrice.toLocaleString()}
                 </span>
               )}
             </div>
@@ -253,35 +250,34 @@ export default function ProductDetailsPage() {
               </div>
             </div>
 
-            <div className="product-action-buttons flex flex-col sm:flex-row gap-4 pt-6">
+            <div className="product-action-buttons pt-6">
               <Button
                 size="lg"
-                className="product-action-button btn-primary flex-1 gap-2"
-                 onClick={handleAddToCart}
-                >
-                  <ShoppingBag className="w-5 h-5" />
-                  Add to Cart
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="product-action-button btn-outline flex-1 gap-2"
-                  onClick={() => setShowTryOn(true)}
-                >
-                  <Sparkles className="w-5 h-5" />
-                  Try with AI
-                </Button>
-              </div>
+                className="product-action-button btn-primary w-full gap-2"
+                onClick={handleAddToCart}
+              >
+                <ShoppingBag className="w-5 h-5" />
+                Add to Cart
+              </Button>
+              <button
+                type="button"
+                className="product-action-button mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-200 hover:from-purple-700 hover:to-pink-700 hover:shadow-xl"
+                onClick={() => setIsTryOnModalOpen(true)}
+              >
+                <Sparkles className="w-5 h-5" />
+                Try with AI
+              </button>
             </div>
           </div>
         </div>
-
         <AiTryOnModal
-          isOpen={showTryOn}
-          onClose={() => setShowTryOn(false)}
-          productImages={product.images}
+          isOpen={isTryOnModalOpen}
+          onClose={() => setIsTryOnModalOpen(false)}
+          productId={product.id}
+          productImage={product.images[0]}
           productName={product.name}
         />
       </div>
-    );
-  }
+    </div>
+  );
+}

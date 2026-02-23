@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Home, Info, LayoutGrid, LogOut, Mail, Search, UserCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,42 @@ export function MobileBottomNav() {
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const standaloneMq = window.matchMedia("(display-mode: standalone)");
+    const mobileMq = window.matchMedia("(max-width: 768px)");
+    const coarsePointerMq = window.matchMedia("(pointer: coarse)");
+
+    const recompute = () => {
+      const isIosStandalone = Boolean(
+        (window.navigator as Navigator & { standalone?: boolean }).standalone
+      );
+      const showOnMobileWeb = mobileMq.matches && coarsePointerMq.matches;
+      setIsVisible(standaloneMq.matches || isIosStandalone || showOnMobileWeb);
+    };
+
+    recompute();
+
+    standaloneMq.addEventListener("change", recompute);
+    mobileMq.addEventListener("change", recompute);
+    coarsePointerMq.addEventListener("change", recompute);
+    window.addEventListener("resize", recompute);
+
+    return () => {
+      standaloneMq.removeEventListener("change", recompute);
+      mobileMq.removeEventListener("change", recompute);
+      coarsePointerMq.removeEventListener("change", recompute);
+      window.removeEventListener("resize", recompute);
+    };
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle("has-mobile-bottom-nav", isVisible);
+    return () => {
+      document.body.classList.remove("has-mobile-bottom-nav");
+    };
+  }, [isVisible]);
 
   const items = useMemo(
     () =>
@@ -30,12 +66,14 @@ export function MobileBottomNav() {
     []
   );
 
+  if (!isVisible) return null;
+
   return (
     <>
       <nav className="mobile-bottom-nav">
         <div className="mx-auto max-w-3xl px-3">
           <div className="rounded-t-2xl border border-border bg-background/90 backdrop-blur-lg shadow-lg">
-            <div className="grid grid-cols-6">
+            <div className="grid items-stretch" style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" }}>
               {items.map((item) => {
                 const Icon = item.icon;
                 return (

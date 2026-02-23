@@ -26,9 +26,14 @@ export function Navbar() {
   useEffect(() => {
     const standaloneMq = window.matchMedia("(display-mode: standalone)");
     const mobileMq = window.matchMedia("(max-width: 768px)");
+    const coarsePointerMq = window.matchMedia("(pointer: coarse)");
 
     const recompute = () => {
-      const shouldHide = standaloneMq.matches || mobileMq.matches;
+      const isIosStandalone = Boolean(
+        (window.navigator as Navigator & { standalone?: boolean }).standalone
+      );
+      const showBottomNav = standaloneMq.matches || isIosStandalone || (mobileMq.matches && coarsePointerMq.matches);
+      const shouldHide = showBottomNav;
       setHideMobileMenu(shouldHide);
       if (shouldHide) setIsMenuOpen(false);
     };
@@ -37,11 +42,13 @@ export function Navbar() {
 
     standaloneMq.addEventListener("change", recompute);
     mobileMq.addEventListener("change", recompute);
+    coarsePointerMq.addEventListener("change", recompute);
     window.addEventListener("resize", recompute);
 
     return () => {
       standaloneMq.removeEventListener("change", recompute);
       mobileMq.removeEventListener("change", recompute);
+      coarsePointerMq.removeEventListener("change", recompute);
       window.removeEventListener("resize", recompute);
     };
   }, []);
